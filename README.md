@@ -19,9 +19,9 @@ Give a z-stack (data cube) and a target style, adjust all the parameters such th
 ### **Functions**: 
 
 
-**Render**: take a data cube and some parameters and create a 2D image. (QUESTION, shouldn’t camera settings also be in this function?)
+**Render**: take a data cube and some render parameters and camera settings and create a 2D image. 
 
- *f<sub>render</sub>(d, Ѱ) = r*
+ *f<sub>render</sub>(d, Ѱ, c) = r*
 
 
 **Ref**: take a 2D image and create a numeral representation. 
