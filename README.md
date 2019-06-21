@@ -83,6 +83,12 @@ f_predict(d_2, s_target) = Ѱ_2
 
 - Generate on the fly vs. beforehand: iteration loop is 0.5 - 2 secs. 
 
+- week 2:
+	- make test render function with thumbnail data set and simple parametric filters
+	- make f_style function 
+	- data loader
+	- try for f_predict
+
 	
 
 **main loop:**
