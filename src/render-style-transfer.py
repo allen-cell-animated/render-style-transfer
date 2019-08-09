@@ -85,10 +85,12 @@ def main():
 
             batch_of_ids = torch.flatten(im_2d_cube_id)
             # print('batch_of_psis shape:', psi.shape)
+            # our batch really has sub-batches of camera samples (images of same style from different view parameters)
+            # combine so that the batch is really batch_size*num_camera_samples
             batch_of_psis = torch.flatten(psi, 0, 1)
-            batch_of_psis = torch.flatten(batch_of_psis, 1, 2)
             # print('made batch of psis', batch_of_psis.shape)
 
+            # combine so that the batch is really batch_size*num_camera_samples
             flattened_im = torch.flatten(im_2d, 0, 1)
             batch_of_styles = f_style(flattened_im)
             # print('batch of styles', batch_of_styles.shape)
@@ -99,7 +101,7 @@ def main():
             # print('im_cube shape', im_cube.shape)
 
             # getting shapes right for inputs into f_psi:
-            # psis shape: torch.Size([4, 10, 3, 3])
+            # psis shape: torch.Size([4, 10, 9])
             # flattened batch of psis torch.Size([360])
             # batch of styles torch.Size([40, 10])
             # im_cube shape torch.Size([4, 3, 392, 392])

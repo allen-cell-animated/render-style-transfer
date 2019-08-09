@@ -1,3 +1,4 @@
+import itertools
 import os
 import random
 
@@ -106,6 +107,7 @@ class RenderStyleTransferDataset(Dataset):
             images.append(renderedimage)
         images = torch.stack(images)
         im_2d_cube_ids = torch.Tensor([idx for i in range(self.camera_samples)])
+        convfilter = list(itertools.chain.from_iterable(convfilter))
         render_params = torch.stack(
             [torch.Tensor(convfilter) for i in range(self.camera_samples)]
         )
