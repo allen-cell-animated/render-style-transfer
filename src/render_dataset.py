@@ -1,16 +1,16 @@
 import os
 import random
 
-from skimage import io, transform
+from skimage import io
 import PIL
-from PIL import Image
+# from PIL import Image
 
 import torch
 import torch.nn.functional as F
-import torchvision
+from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 
-## Setting up dataset and data loader
+# Setting up dataset and data loader
 
 # Our dataset transforms the data on the fly.
 

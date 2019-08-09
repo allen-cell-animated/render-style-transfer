@@ -4,27 +4,18 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
 
 import matplotlib.pyplot as plt
 
-import numpy as np
-import os
-import PIL
-from PIL import Image
-import random
+from render_dataset import RenderStyleTransferDataset
+from f_style import FStyle
+# from src.f_renderparams import FPsi
 
-from skimage import io, transform
-
-from src.render_dataset import RenderStyleTransferDataset
-from src.f_style import FStyle
-from src.f_renderparams import FPsi
-
-## Utility functions
+# Utility functions
 
 # functions to show an image
+
 
 # pil image or ndarray
 def imshow(img):
@@ -37,7 +28,6 @@ def imshow(img):
 
 # list of tensors
 def imshow_list(img):
-    num = len(img)
     st = torch.stack(img)
     imshow(torchvision.utils.make_grid(st).permute(1, 2, 0))
 
@@ -56,8 +46,8 @@ def main():
 
     # train (bool, optional)
     # split the data set based on the value of train into a repeatable 80%-20% split
-    trainset = RenderStyleTransferDataset(root_dir="/thumbnail-dataset", train=True)
-    testset = RenderStyleTransferDataset(root_dir="/thumbnail-dataset", train=False)
+    trainset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=True)
+    testset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=False)
 
     # takes the trainset we defined, loads 4 (default 1) at a time,
     # shuffle=True reshuffles the data every epoch
@@ -113,7 +103,8 @@ def main():
 
             # f_psi will take a batch of 10 styles and a batch of 1 data cube
             # and return a batch of 10 psis
-            print(im_cube, batch_of_styles)
+            # print(im_cube, batch_of_styles)
+            
             ############################################
             # psi_hat = f_psi(im_cube, batch_of_styles)
             # loss_psi = loss_fn(psi_hat, batch_of_psis)
@@ -240,3 +231,5 @@ def main():
 # net.to(device)
 # inputs, labels = data[0].to(device), data[1].to(device)
 
+if __name__ == "__main__":
+    main()
