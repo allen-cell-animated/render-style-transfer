@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# F\_Psi questions
+# F_Psi questions
 
 # 1. For FPsi, if we do a convolution network, how do we incorporate the target style tensor into the input data?
 # 2. Could we do something where we pick random parameters, render an image, get the style, compare with target style and then adjust?

@@ -16,14 +16,14 @@ import torchvision.transforms as transforms
 
 # It has a render method that takes in input image data, render params and camera restrictions.
 
-# It chooses camera\_samples random "camera" rotations, and creates camera\_samples number of images of the same "data cube" with the one set of render parameters.
+# It chooses camera_samples random "camera" rotations, and creates camera_samples number of images of the same "data cube" with the one set of render parameters.
 
 # get item returns:
 
-# 1. im\_as\_tensor (input data cube as tensor)
-# 2. images (camera\_samples images)
-# 3. im\_2d\_cube\_ids (array of length camera\_samples, all with the same cube id)
-# 4. render\_params (array of length camera\_samples, all with the same render parameters)
+# 1. im_as_tensor (input data cube as tensor)
+# 2. images (camera_samples images)
+# 3. im_2d_cube_ids (array of length camera_samples, all with the same cube id)
+# 4. render_params (array of length camera_samples, all with the same render parameters)
 
 
 class RenderStyleTransferDataset(Dataset):
