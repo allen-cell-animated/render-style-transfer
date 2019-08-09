@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 from render_dataset import RenderStyleTransferDataset
 from f_style import FStyle
-# from src.f_renderparams import FPsi
+from f_renderparams import FPsi
 
 # Utility functions
 
@@ -46,8 +46,10 @@ def main():
 
     # train (bool, optional)
     # split the data set based on the value of train into a repeatable 80%-20% split
-    trainset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=True)
-    testset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=False)
+    #trainset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=True)
+    #testset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=False)
+    trainset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=True)
+    testset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=False)
 
     # takes the trainset we defined, loads 4 (default 1) at a time,
     # shuffle=True reshuffles the data every epoch
@@ -64,7 +66,7 @@ def main():
     ## Training
 
     f_style = FStyle()
-    # f_psi = FPsi()
+    f_psi = FPsi()
 
     loss_fn = nn.MSELoss()
     regularization_rate = 0.1  # aka lambda
@@ -83,7 +85,8 @@ def main():
 
             batch_of_ids = torch.flatten(im_2d_cube_id)
             # print('batch_of_psis shape:', psi.shape)
-            batch_of_psis = torch.flatten(psi)
+            batch_of_psis = torch.flatten(psi, 0, 1)
+            batch_of_psis = torch.flatten(batch_of_psis, 1, 2)
             # print('made batch of psis', batch_of_psis.shape)
 
             flattened_im = torch.flatten(im_2d, 0, 1)
@@ -106,10 +109,9 @@ def main():
             # print(im_cube, batch_of_styles)
             
             ############################################
-            # psi_hat = f_psi(im_cube, batch_of_styles)
-            # loss_psi = loss_fn(psi_hat, batch_of_psis)
+            psi_hat = f_psi(im_cube, batch_of_styles)
+            loss_psi = loss_fn(psi_hat, batch_of_psis)
             ###########################################
-            loss_psi = torch.Tensor([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
             loss_style = torch.zeros(1)
 
@@ -143,8 +145,7 @@ def main():
             print("new total loss style", loss_style)
             loss_style = loss_style / len(batch_of_styles)
             print("new average loss style", loss_style)
-            total_loss = loss_style
-            # total_loss = loss_psi + regularization_rate*loss_style
+            total_loss = loss_psi + regularization_rate*loss_style
 
             total_loss.backward()
 
