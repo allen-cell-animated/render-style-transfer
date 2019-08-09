@@ -57,9 +57,14 @@ class RenderStyleTransferDataset(Dataset):
         # in this case, the "render" will be a convolution filter and the render params are the filter weights
         # and our camera_transform just rotates the image
 
+        # the first 9 render_params need to become a 3x3 filter to apply to the image.
+        if len(render_params) < 9:
+            raise "Bad number of render_params"
+        convfilter = [[render_params[i+j*3] for i in range(3)] for j in range(3)]
+
         # note that groups=3 and we only put one in the array here
         # this is reshaping to make the conv2d happy
-        reshaped_params = [render_params]
+        reshaped_params = [convfilter]
         renderedimage = F.conv2d(
             torch.Tensor([input_data]),
             # apply same filter to each of r,g,b channels
@@ -89,7 +94,7 @@ class RenderStyleTransferDataset(Dataset):
 
         # generate a repeatable set of render parameters for our render_function
         random.seed(a=idx)
-        convfilter = [[random.random() for i in range(3)] for j in range(3)]
+        convfilter = [random.random() for i in range(9)]
 
         # prepare the sampler of camera transforms
         camera_degree_range = 45.0
@@ -107,7 +112,6 @@ class RenderStyleTransferDataset(Dataset):
             images.append(renderedimage)
         images = torch.stack(images)
         im_2d_cube_ids = torch.Tensor([idx for i in range(self.camera_samples)])
-        convfilter = list(itertools.chain.from_iterable(convfilter))
         render_params = torch.stack(
             [torch.Tensor(convfilter) for i in range(self.camera_samples)]
         )
