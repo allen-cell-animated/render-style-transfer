@@ -63,7 +63,7 @@ def main():
         testset, batch_size=4, shuffle=False, num_workers=0
     )
 
-    ## Training
+    # Training
 
     f_style = FStyle()
     f_psi = FPsi()

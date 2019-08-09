@@ -61,6 +61,7 @@ class RenderStyleTransferDataset(Dataset):
         reshaped_params = [render_params]
         renderedimage = F.conv2d(
             torch.Tensor([input_data]),
+            # apply same filter to each of r,g,b channels
             torch.Tensor([reshaped_params, reshaped_params, reshaped_params]),
             bias=None,
             stride=1,
