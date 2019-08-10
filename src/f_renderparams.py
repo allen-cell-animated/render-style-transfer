@@ -11,11 +11,12 @@ import torch.nn.functional as F
 # compute a set of render parameters (psi) given an input_data and style
 class FPsi(nn.Module):
     def __init__(self, num_render_params=9, num_camera_samples=16):
+        super(FPsi, self).__init__()
         self.num_render_params = num_render_params
         self.num_camera_samples = num_camera_samples
         # TODO IMPLEMENT greg hints:
         # 4 downsampling conv2ds, and then adaptive average pooling to get to the final result size
-        super(FPsi, self).__init__()
+        
         # args: in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode='zeros'
         # This results in 2 "parameters": 6 learned kernels of size 5x5 per input channel (3) plus 6 learned scalar bias terms
         self.conv1 = nn.Conv2d(3, 6, 5)
@@ -36,7 +37,9 @@ class FPsi(nn.Module):
         self.fc2 = nn.Linear(120, 84)
         # This results in 2 "parameters": 10 learned linear weight vectors of length 84, plus 10 learned scalar bias terms
         self.fc3 = nn.Linear(84, num_render_params)
-
+        style_length = 10
+        volintensitylength = 1  # n channels in volume ?
+        self.styleconv = nn.Linear(style_length, volintensitylength)
 
     def combine(self, x, y):
         # x is a (batch of) volume data cube, y is a (batch of) style representation of 1xN (1d vector)
@@ -47,9 +50,7 @@ class FPsi(nn.Module):
         # import pdb
         # pdb.set_trace()
 
-        volintensitylength = 1  # n channels in volume ?
-        styleconv = nn.Linear(y.shape[1], volintensitylength)
-        to_combine = styleconv(y)
+        to_combine = self.styleconv(y)
         # add 2 dimensions and then repeat values.
         expanded = to_combine.unsqueeze(2).unsqueeze(2).repeat([1, x.shape[1], x.shape[2], x.shape[3]])
         return x + expanded
@@ -72,13 +73,14 @@ class FPsi(nn.Module):
         # y is the style tensor
 
         # y comes in with num_camera_samples*batch_size, but x came in just at batch_size
+        # THIS IS CRAZY TO REPEAT THIS DATA ?!
         x = x.repeat([self.num_camera_samples, 1, 1, 1])
         # now, ready to go!
 
         # strategy :  combine the style with the volume, then downsample, then repeat a few times.
 
         x = self.combine(x, y)
-        # [ 4, 3, 392, 392, 64, 10]
+        # [ 64, 3, 392, 392]
 
         x = self.pool(F.relu(self.conv1(x)))  # ==> [ 64, 6, 194, 194 ]
         x = self.combine(x, y)

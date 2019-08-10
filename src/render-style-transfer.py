@@ -65,8 +65,8 @@ def main():
 
     # Training
 
-    f_style = FStyle()
-    f_psi = FPsi()
+    f_style = FStyle().cuda()
+    f_psi = FPsi().cuda()
 
     loss_fn = nn.MSELoss()
     regularization_rate = 0.1  # aka lambda
@@ -82,6 +82,11 @@ def main():
         # each epoch trainloader will shuffle the data because we told it to
         for i, data in enumerate(trainloader, 0):
             im_cube, im_2d, im_2d_cube_id, psi = data
+
+            im_cube = im_cube.cuda()
+            im_2d = im_2d.cuda()
+            im_2d_cube_id = im_2d_cube_id.cuda()
+            psi = psi.cuda()
 
             batch_of_ids = torch.flatten(im_2d_cube_id)
             # print('batch_of_psis shape:', psi.shape)
@@ -111,11 +116,12 @@ def main():
             # print(im_cube, batch_of_styles)
             
             ############################################
+
             psi_hat = f_psi(im_cube, batch_of_styles)
             loss_psi = loss_fn(psi_hat, batch_of_psis)
             ###########################################
 
-            loss_style = torch.zeros(1)
+            loss_style = torch.zeros(1).cuda()
 
             for i, s in enumerate(batch_of_styles):
                 # get all ids that are the same as i
@@ -148,6 +154,8 @@ def main():
             loss_style = loss_style / len(batch_of_styles)
             print("new average loss style", loss_style)
             total_loss = loss_psi + regularization_rate*loss_style
+            print("new average loss psi", loss_psi)
+            print("new average loss total", total_loss)
 
             total_loss.backward()
 
