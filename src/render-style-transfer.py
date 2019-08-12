@@ -90,10 +90,6 @@ def main():
 
             batch_of_ids = torch.flatten(im_2d_cube_id)
             # print('batch_of_psis shape:', psi.shape)
-            # our batch really has sub-batches of camera samples (images of same style from different view parameters)
-            # combine so that the batch is really batch_size*num_camera_samples
-            batch_of_psis = torch.flatten(psi, 0, 1)
-            # print('made batch of psis', batch_of_psis.shape)
 
             # combine so that the batch is really batch_size*num_camera_samples
             flattened_im = torch.flatten(im_2d, 0, 1)
@@ -102,7 +98,6 @@ def main():
 
             # psi_hat should be same format as psi (a batch of render_params)
 
-            # TODO: comment back in when f_psi is working
             # print('im_cube shape', im_cube.shape)
 
             # getting shapes right for inputs into f_psi:
@@ -116,9 +111,15 @@ def main():
             # print(im_cube, batch_of_styles)
             
             ############################################
-
-            psi_hat = f_psi(im_cube, batch_of_styles)
-            loss_psi = loss_fn(psi_hat, batch_of_psis)
+            # choose a batch of styles to pass to f_psi
+            # by picking one from each sub-batch 
+            perm = torch.randint(f_psi.num_camera_samples, (im_cube.size(0),))
+            for j in range(perm.size(0)):
+                perm[j] += j*f_psi.num_camera_samples
+            small_batch_of_styles = batch_of_styles[perm]
+        
+            psi_hat = f_psi(im_cube, small_batch_of_styles)
+            loss_psi = loss_fn(psi_hat, psi)
             ###########################################
 
             loss_style = torch.zeros(1).cuda()

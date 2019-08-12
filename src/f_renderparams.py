@@ -58,49 +58,44 @@ class FPsi(nn.Module):
     # running data through the network
     def forward(self, x, y):
         # getting shapes right for inputs into f_psi:
-        # psis shape: torch.Size([4, 16, 3, 3])
+        # psis shape: torch.Size([4, 3, 3])
         # flattened batch of psis torch.Size([360])
-        # Y: batch of styles torch.Size([64, 10])
+        # Y: batch of styles torch.Size([4, 10])
         # X: im_cube shape torch.Size([4, 3, 392, 392])
 
         # f_psi will take a batch of num_camera_samples styles and a batch of 1 data cube
         # and return a batch of num_camera_samples psis
 
-        # a batch (4) of 16 3x3 filters
-        # want to return shape[64, 3, 3] or [4, 16, 3, 3] ?
+        # a batch (4) of 3x3 filters
+        # want to return shape[4, 3, 3]
 
         # x is the volume data
         # y is the style tensor
 
-        # y comes in with num_camera_samples*batch_size, but x came in just at batch_size
-        # THIS IS CRAZY TO REPEAT THIS DATA ?!
-        x = x.repeat([self.num_camera_samples, 1, 1, 1])
-        # now, ready to go!
-
         # strategy :  combine the style with the volume, then downsample, then repeat a few times.
 
         x = self.combine(x, y)
-        # [ 64, 3, 392, 392]
+        # [ 4, 3, 392, 392]
 
-        x = self.pool(F.relu(self.conv1(x)))  # ==> [ 64, 6, 194, 194 ]
+        x = self.pool(F.relu(self.conv1(x)))  # ==> [ 4, 6, 194, 194 ]
         x = self.combine(x, y)
 
-        x = self.pool(F.relu(self.conv2(x)))  # ==> [ 64, 16, 95, 95 ]
+        x = self.pool(F.relu(self.conv2(x)))  # ==> [ 4, 16, 95, 95 ]
         x = self.combine(x, y)
 
-        x = self.pool5(x)  # ==> [ 64, 16, 19, 19 ]
+        x = self.pool5(x)  # ==> [ 4, 16, 19, 19 ]
         x = self.combine(x, y)
 
         # reshape tensor x to have its second dimension be of size 16*19*19,
         # (to fit into the fc1 ?)
-        x = x.view(-1, 16 * 19 * 19)  # ==> [64, 5776]
+        x = x.view(-1, 16 * 19 * 19)  # ==> [4, 5776]
 
-        # torch.Size([64, 5776])
+        # torch.Size([4, 5776])
         x = F.relu(self.fc1(x))
-        # torch.Size([64, 120])
+        # torch.Size([4, 120])
         x = F.relu(self.fc2(x))
-        # torch.Size([64, 84])
+        # torch.Size([4, 84])
         x = self.fc3(x)
         # because fc3 returns length num_render_params, that is our final length of a style representation:
-        # torch.Size([64, num_render_params])
+        # torch.Size([4, num_render_params])
         return x
