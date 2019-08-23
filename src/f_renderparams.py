@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from basic_block import BasicBlock
+from weight_init import weight_init
+
 # F_Psi questions
 
 # 1. For FPsi, if we do a convolution network, how do we incorporate the target style tensor into the input data?
@@ -19,27 +22,24 @@ class FPsi(nn.Module):
         
         # args: in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode='zeros'
         # This results in 2 "parameters": 6 learned kernels of size 5x5 per input channel (3) plus 6 learned scalar bias terms
-        self.conv1 = nn.Conv2d(3, 6, 5)
+        self.main = nn.ModuleList([
+            BasicBlock(3, 8, 5),
+            BasicBlock(8, 16, 4, 2),
+            BasicBlock(16, 32, 4, 2),
+            BasicBlock(32, 64, 4, 2),
+            BasicBlock(64, 128, 4, 2),
+            BasicBlock(128, 512, 4, 2),
+            BasicBlock(512, 512, 4, 2),
+            BasicBlock(512, 512, 4, 2)
+        ])
+        self.fc1 = nn.Linear(512, 512)
+        self.fc2 = nn.Linear(512, 512)
+        self.fc3 = nn.Linear(512, num_render_params)
 
-        # Applies a 2D max pooling over an input signal composed of several input planes.
-        # args: (kernel_size, stride=None, padding=0, dilation=1, return_indices=False, ceil_mode=False)
-        # This results in 2x2 downsampling with a "max" filter
-        self.pool = nn.MaxPool2d(2, 2)
-        self.pool5 = nn.MaxPool2d(5, 5)
-
-        # This results in 2 "parameters": 16 learned kernels of size 5x5 per input channel (6) plus 16 learned scalar bias terms
-        self.conv2 = nn.Conv2d(6, 16, 5)
-        # Applies a linear transformation to the incoming data: y = xA^T + b
-        # args: (in_features, out_features, bias=True)
-        # This results in 2 "parameters": 120 learned linear weight vectors of length 16*5*5, plus 120 learned scalar bias terms
-        self.fc1 = nn.Linear(16 * 19 * 19, 120)
-        # This results in 2 "parameters": 84 learned linear weight vectors of length 120, plus 84 learned scalar bias terms
-        self.fc2 = nn.Linear(120, 84)
-        # This results in 2 "parameters": 10 learned linear weight vectors of length 84, plus 10 learned scalar bias terms
-        self.fc3 = nn.Linear(84, num_render_params)
         style_length = 10
         volintensitylength = 1  # n channels in volume ?
         self.styleconv = nn.Linear(style_length, volintensitylength)
+        self.apply(weight_init)
 
     def combine(self, x, y):
         # x is a (batch of) volume data cube, y is a (batch of) style representation of 1xN (1d vector)
@@ -74,21 +74,13 @@ class FPsi(nn.Module):
 
         # strategy :  combine the style with the volume, then downsample, then repeat a few times.
 
-        x = self.combine(x, y)
-        # [ 4, 3, 392, 392]
-
-        x = self.pool(F.relu(self.conv1(x)))  # ==> [ 4, 6, 194, 194 ]
-        x = self.combine(x, y)
-
-        x = self.pool(F.relu(self.conv2(x)))  # ==> [ 4, 16, 95, 95 ]
-        x = self.combine(x, y)
-
-        x = self.pool5(x)  # ==> [ 4, 16, 19, 19 ]
-        x = self.combine(x, y)
+        for layer in self.main:
+            x = self.combine(x, y)
+            x = layer(x)
 
         # reshape tensor x to have its second dimension be of size 16*19*19,
         # (to fit into the fc1 ?)
-        x = x.view(-1, 16 * 19 * 19)  # ==> [4, 5776]
+        x = x.view([x.shape[0], -1])
 
         # torch.Size([4, 5776])
         x = F.relu(self.fc1(x))

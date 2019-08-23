@@ -45,6 +45,14 @@ class RenderStyleTransferDataset(Dataset):
             full = os.path.join(self.root_dir, name)
             if os.path.isfile(full) and name[-4:] == ".png":
                 self.all_files.append(name)
+
+        training_set_count = int(len(self.all_files)*0.8)
+        test_set_count = len(self.all_files) - training_set_count
+        if train:
+            self.all_files = self.all_files[:training_set_count]
+        else:
+            self.all_files = self.all_files[-test_set_count:]
+
         num_files = len(self.all_files)
         print("RenderStyleTransferDataset created with size: " + str(num_files))
 
