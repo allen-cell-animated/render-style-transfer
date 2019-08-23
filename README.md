@@ -89,7 +89,17 @@ f_predict(d_2, s_target) = Ѱ_2
 	- data loader
 	- try for f_predict
 
-	
+- Aug 23:
+	- Questions: 
+		* how do we compare/evaluate models?
+		* what is a batch?, how big should a batch be and how many batches should we use
+	- To do:
+		* log of loss in plot
+		* save model and load a model, set parameter, about every 5 epochs
+		* increase batch size
+		* load model and data loader to evaluate jypter notebook
+		* evauate model
+		
 
 **main loop:**
 
