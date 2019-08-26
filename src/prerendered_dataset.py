@@ -1,4 +1,4 @@
-import itertools
+import json
 import os
 import random
 
@@ -11,8 +11,6 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
-
-from render_function import render_function
 
 # Setting up dataset and data loader
 
@@ -31,7 +29,7 @@ from render_function import render_function
 
 
 class RenderStyleTransferDataset(Dataset):
-    def __init__(self, root_dir, camera_samples=16, train=True):
+    def __init__(self, cache_file, train=True):
         """
         Args:
             root_dir (string): Directory with all the images.
@@ -39,55 +37,43 @@ class RenderStyleTransferDataset(Dataset):
             train (boolean): TODO: select images from training set vs test set
         """
 
-        # TODO point this to /allen file system data sets
-        self.root_dir = root_dir
+        self.cache_file = cache_file
+        with open(cache_file, "r") as read_file:
+            self.dataset = json.load(read_file)
 
-        self.camera_samples = camera_samples
-        self.all_files = []
-        for name in os.listdir(self.root_dir):
-            full = os.path.join(self.root_dir, name)
-            if os.path.isfile(full) and name[-4:] == ".png":
-                self.all_files.append(name)
-
-        training_set_count = int(len(self.all_files) * 0.8)
-        test_set_count = len(self.all_files) - training_set_count
+        count = len(self.dataset)
+        training_set_count = int(count * 0.8)
+        test_set_count = count - training_set_count
         if train:
-            self.all_files = self.all_files[:training_set_count]
+            self.dataset = self.dataset[:training_set_count]
         else:
-            self.all_files = self.all_files[-test_set_count:]
+            self.dataset = self.dataset[-test_set_count:]
 
-        num_files = len(self.all_files)
-        print("RenderStyleTransferDataset created with size: " + str(num_files))
+        self.num_files = len(self.dataset)
+        print("RenderStyleTransferDataset created with size: " + str(self.num_files))
 
     def __len__(self):
-        return len(self.all_files)
+        return self.num_files
 
     def __getitem__(self, idx):
         # load some input_data for our render_function
+        dataset_entry = self.dataset[idx]
         img_name = os.path.join(self.root_dir, self.all_files[idx])
-        image = io.imread(img_name)
+        image = io.imread(dataset_entry["data_file"])
 
-        # generate a repeatable set of render parameters for our render_function
-        random.seed(a=idx)
-        convfilter = [random.random() for i in range(9)]
-
-        # prepare the sampler of camera transforms
-        camera_degree_range = 45.0
-        apply_camera = transforms.RandomRotation(
-            camera_degree_range, resample=PIL.Image.BICUBIC
-        )
+        convfilter = dataset_entry["render_params"]
 
         # loop to generate a set of images with the same style (render settings) but different camera angles
         images = []
-        for i in range(self.camera_samples):
+        for i, path in enumerate(dataset_entry["renders"]):
             # generate a rendered image of the given style
-            renderedimage = render_function(
-                image.transpose(2, 1, 0), convfilter, apply_camera
-            )
+            renderedimage = io.imread(path)
             final_image = transforms.functional.to_tensor(renderedimage)
-            images.append(final_image)
+            images.append(renderedimage)
         images = torch.stack(images)
-        im_2d_cube_ids = torch.Tensor([idx for i in range(self.camera_samples)])
+        im_2d_cube_ids = torch.Tensor(
+            [idx for i in range(len(dataset_entry["renders"]))]
+        )
         render_params = torch.Tensor(convfilter)
 
         im_as_tensor = transforms.functional.to_tensor(image)

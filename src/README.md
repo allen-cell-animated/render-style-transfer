@@ -8,3 +8,9 @@ pip3 install matplotlib
 pip3 install scikit-image
 pip3 install scipy
 
+# to run:
+python precompute_dataset.py
+- precomputes a complete dataset
+
+python render-style-transfer.py
+- trains the model
