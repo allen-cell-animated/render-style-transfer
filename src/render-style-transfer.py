@@ -46,10 +46,10 @@ def randomly_choose(list_of_stuff):
 def train(f_style, f_psi, trainloader, trainset, keep_logs=False):
     file_name = time.time_ns()
     if keep_logs:
-        path = 'src/results'
+        path = 'results'
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
     else:
-        path = 'src/loss'
+        path = 'loss'
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
 
     file_path = f"{path}/{file_name}.csv"
