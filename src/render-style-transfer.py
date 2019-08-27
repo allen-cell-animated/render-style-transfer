@@ -1,12 +1,13 @@
 # Render style transfer
-
+import sys
 import torch
 import torchvision
 import torchvision.transforms as transforms
 import torch.nn as nn
 import torch.optim as optim
-
+import time
 import matplotlib.pyplot as plt
+import pathlib
 
 from render_dataset import RenderStyleTransferDataset
 from f_style import FStyle
@@ -42,15 +43,25 @@ def randomly_choose(list_of_stuff):
     return list_of_stuff[perm]
 
 
-def train(f_style, f_psi, trainloader, trainset):
+def train(f_style, f_psi, trainloader, trainset, keep_logs=False):
+    file_name = time.time_ns()
+    if keep_logs:
+        path = 'src/results'
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+    else:
+        path = 'src/loss'
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
 
+    file_path = f"{path}/{file_name}.csv"
+    f = open(file_path, "w+")
+    f.write("Epoch, index,loss_style,loss_psi,total_loss\n")
+    f.close()
     loss_fn = nn.MSELoss()
     regularization_rate = 1  # aka lambda
     # Implements stochastic gradient descent (optionally with momentum).
     # lr is the learning rate, required
     optimizer = optim.Adam(f_style.parameters(), lr=0.0001)
     number_of_epochs = 1
-
     for epoch in range(number_of_epochs):  # loop over the dataset multiple times
         print(f"epoch {epoch}")
         running_loss = 0.0
@@ -132,7 +143,12 @@ def train(f_style, f_psi, trainloader, trainset):
             # print("new average loss style", loss_style)
             total_loss = regularization_rate*loss_psi + loss_style
             # print("new average loss psi", loss_psi)
-            print(f"loss: {loss_style.item()} + {regularization_rate*loss_psi.item()} : total {total_loss.item()}")
+            # print(f"loss: {loss_style.item()} + {regularization_rate*loss_psi.item()} : total {total_loss.item()}")
+            
+            # append current loss log with results 
+            f = open(file_path, "a+")
+            f.write(f"{epoch},{i},{loss_style.item()},{regularization_rate*loss_psi.item()},{total_loss.item()}\n")
+            f.close()
 
             total_loss.backward()
 
@@ -146,6 +162,7 @@ def train(f_style, f_psi, trainloader, trainset):
             if i % everyN == everyN - 1:  # print every 10 mini-batches
                 print(f"[{epoch+1}, {i+1}] loss: {running_loss/everyN}")
                 running_loss = 0.0
+
 
 
 def test(f_style, f_psi, testloader):
@@ -225,7 +242,7 @@ def test(f_style, f_psi, testloader):
     print("1")
 
 
-def main():
+def main(keep_logs):
     # Data loader. Combines a dataset and a sampler, and provides single- or multi-process iterators over the dataset.
 
     # train (bool, optional)
@@ -256,7 +273,7 @@ def main():
     f_style = FStyle().to(device)
     f_psi = FPsi().to(device)
 
-    train(f_style, f_psi, trainloader, trainset)
+    train(f_style, f_psi, trainloader, trainset, keep_logs)
 
     test(f_style, f_psi, testloader)
 
@@ -266,4 +283,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
