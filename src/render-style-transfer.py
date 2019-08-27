@@ -12,6 +12,7 @@ from render_dataset import RenderStyleTransferDataset
 from f_style import FStyle
 from f_renderparams import FPsi
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # Utility functions
 
 # functions to show an image
@@ -42,6 +43,7 @@ def randomly_choose(list_of_stuff):
 
 
 def train(f_style, f_psi, trainloader, trainset):
+
     loss_fn = nn.MSELoss()
     regularization_rate = 1  # aka lambda
     # Implements stochastic gradient descent (optionally with momentum).
@@ -57,10 +59,10 @@ def train(f_style, f_psi, trainloader, trainset):
         for i, data in enumerate(trainloader, 0):
             im_cube, im_2d, im_2d_cube_id, psi = data
 
-            im_cube = im_cube.cuda()
-            im_2d = im_2d.cuda()
-            im_2d_cube_id = im_2d_cube_id.cuda()
-            psi = psi.cuda()
+            im_cube = im_cube.to(device)
+            im_2d = im_2d.to(device)
+            im_2d_cube_id = im_2d_cube_id.to(device)
+            psi = psi.to(device)
 
             batch_of_ids = torch.flatten(im_2d_cube_id)
             # print('batch_of_psis shape:', psi.shape)
@@ -96,7 +98,7 @@ def train(f_style, f_psi, trainloader, trainset):
             loss_psi = loss_fn(psi_hat, psi)
             ###########################################
 
-            loss_style = torch.zeros(1).cuda()
+            loss_style = torch.zeros(1).to(device)
 
             for j, s in enumerate(batch_of_styles):
                 # get all ids that are the same as i
@@ -230,9 +232,13 @@ def main():
     # split the data set based on the value of train into a repeatable 80%-20% split
     # trainset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=True)
     # testset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=False)
-    trainset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=True)
-    testset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=False)
-
+    # trainset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=True)
+    # testset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=False)
+    # mac paths for shared directory
+    trainset = RenderStyleTransferDataset(
+        root_dir="/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data", train=True)
+    testset = RenderStyleTransferDataset(
+        root_dir="/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data", train=False)
     # takes the trainset we defined, loads 4 (default 1) at a time,
     # shuffle=True reshuffles the data every epoch
     # for shuffle, an epoch is defined as one full iteration through the DataLoader
@@ -247,8 +253,8 @@ def main():
 
     # Training
 
-    f_style = FStyle().cuda()
-    f_psi = FPsi().cuda()
+    f_style = FStyle().to(device)
+    f_psi = FPsi().to(device)
 
     train(f_style, f_psi, trainloader, trainset)
 

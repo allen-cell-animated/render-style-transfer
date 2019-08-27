@@ -89,7 +89,7 @@ f_predict(d_2, s_target) = Ѱ_2
 	- data loader
 	- try for f_predict
 
-	
+
 
 **main loop:**
 

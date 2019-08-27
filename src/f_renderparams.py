@@ -5,23 +5,12 @@ import torch.nn.functional as F
 from basic_block import BasicBlock
 from weight_init import weight_init
 
-# F_Psi questions
-
-# 1. For FPsi, if we do a convolution network, how do we incorporate the target style tensor into the input data?
-# 2. Could we do something where we pick random parameters, render an image, get the style, compare with target style and then adjust?
-
-
 # compute a set of render parameters (psi) given an input_data and style
 class FPsi(nn.Module):
     def __init__(self, num_render_params=9, num_camera_samples=16):
         super(FPsi, self).__init__()
         self.num_render_params = num_render_params
-        self.num_camera_samples = num_camera_samples
-        # TODO IMPLEMENT greg hints:
-        # 4 downsampling conv2ds, and then adaptive average pooling to get to the final result size
-        
-        # args: in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True, padding_mode='zeros'
-        # This results in 2 "parameters": 6 learned kernels of size 5x5 per input channel (3) plus 6 learned scalar bias terms
+        self.num_camera_samples = num_camera_samples        
         self.main = nn.ModuleList([
             BasicBlock(3, 8, 5),
             BasicBlock(8, 16, 4, 2),
@@ -46,9 +35,6 @@ class FPsi(nn.Module):
         # x is assumed to have one single channel
         # x.shape = [batch, z, y, x]
         # y.shape = [batch, syle_representation_vector_length]
-
-        # import pdb
-        # pdb.set_trace()
 
         to_combine = self.styleconv(y)
         # add 2 dimensions and then repeat values.

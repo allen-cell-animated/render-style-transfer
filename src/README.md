@@ -8,3 +8,12 @@ pip3 install matplotlib
 pip3 install scikit-image
 pip3 install scipy
 
+# Mac with anaconda  
+- need python 3.6
+- conda create --name py3 python=3.6
+- conda activate py3
+- conda install -c pytorch pytorch
+- conda install -c pytorch torchvision
+- conda install matplotlib
+- conda install -c conda-forge scikit-image
+
