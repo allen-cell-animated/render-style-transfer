@@ -25,7 +25,7 @@ def img_from_tensor(t):
 def main(
     num_renders=16,
     src_dir="D:/src/aics/render-style-transfer/training_data",
-    cache_dir="D:/src/aics/render-style-transfer/training_data",
+    cache_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data/cached",
 ):
     dataset = []
 
@@ -38,6 +38,8 @@ def main(
             all_files.append(full)
             all_files_names.append(name[:-4])
 
+    os.makedirs(cache_dir, exist_ok=True)
+
     num_files = len(all_files)
     print(f"found {num_files} data files")
 
@@ -48,7 +50,7 @@ def main(
 
         # generate a repeatable set of render parameters for our render_function
         random.seed(a=i)
-        convfilter = [random.random() for j in range(9)]
+        convfilter = [random.random() for k in range(9)]
 
         # prepare the sampler of camera transforms
         camera_degree_range = 45.0
@@ -63,7 +65,7 @@ def main(
             renderedimage = render_function(
                 image.transpose(2, 1, 0), convfilter, apply_camera
             )
-            outpath = f"{cache_dir}/{filename}_rendered_{i}.png"
+            outpath = f"{cache_dir}/{filename}_rendered_{j}.png"
             renderedimage.save(outpath)
             images.append(outpath)
 

@@ -4,7 +4,7 @@ import torchvision.transforms as transforms
 
 
 # returns a pil-compatible rbg image
-def render_function(self, input_data, render_params, camera_transform):
+def render_function(input_data, render_params, camera_transform):
     # this function could do anything (e.g. do volume rendering)
     # in this case, the "render" will be a convolution filter and the render params are the filter weights
     # and our camera_transform just rotates the image
