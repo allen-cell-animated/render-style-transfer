@@ -28,7 +28,7 @@ import torchvision.transforms as transforms
 # 4. render_params (array of length camera_samples, all with the same render parameters)
 
 
-class RenderStyleTransferDataset(Dataset):
+class PrecomputedStyleTransferDataset(Dataset):
     def __init__(self, cache_file, train=True):
         """
         Args:
@@ -58,7 +58,6 @@ class RenderStyleTransferDataset(Dataset):
     def __getitem__(self, idx):
         # load some input_data for our render_function
         dataset_entry = self.dataset[idx]
-        img_name = os.path.join(self.root_dir, self.all_files[idx])
         image = io.imread(dataset_entry["data_file"])
 
         convfilter = dataset_entry["render_params"]
@@ -69,7 +68,7 @@ class RenderStyleTransferDataset(Dataset):
             # generate a rendered image of the given style
             renderedimage = io.imread(path)
             final_image = transforms.functional.to_tensor(renderedimage)
-            images.append(renderedimage)
+            images.append(final_image)
         images = torch.stack(images)
         im_2d_cube_ids = torch.Tensor(
             [idx for i in range(len(dataset_entry["renders"]))]

@@ -8,7 +8,9 @@ import torch.optim as optim
 
 import matplotlib.pyplot as plt
 
+from prerendered_dataset import PrecomputedStyleTransferDataset
 from render_dataset import RenderStyleTransferDataset
+
 from f_style import FStyle
 from f_renderparams import FPsi
 
@@ -101,7 +103,7 @@ def train(f_style, f_psi, trainloader, trainset):
             for j, s in enumerate(batch_of_styles):
                 # get all ids that are the same as i
 
-                p = j // trainset.camera_samples
+                p = j // f_psi.num_camera_samples
                 current_im_id = im_2d_cube_id[p][0]
                 list_of_same_ids = (batch_of_ids == current_im_id).nonzero().flatten()
 
@@ -230,8 +232,10 @@ def main():
     # split the data set based on the value of train into a repeatable 80%-20% split
     # trainset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=True)
     # testset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=False)
-    trainset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=True)
-    testset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=False)
+    # trainset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=True)
+    # testset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=False)
+    trainset = PrecomputedStyleTransferDataset(cache_file="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data/cached/dataset.json", train=True)
+    testset = PrecomputedStyleTransferDataset(cache_file="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data/cached/dataset.json", train=False)
 
     # takes the trainset we defined, loads 4 (default 1) at a time,
     # shuffle=True reshuffles the data every epoch
@@ -253,7 +257,6 @@ def main():
     train(f_style, f_psi, trainloader, trainset)
 
     test(f_style, f_psi, testloader)
-
 
     print("Finished Training")
 
