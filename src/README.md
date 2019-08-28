@@ -18,5 +18,11 @@ pip3 install scipy
 - conda install -c conda-forge scikit-image
 
 # Run
+
+# to run:
+`python precompute_dataset.py`
+- precomputes a complete dataset
+
 Run render-style-transfer with optional boolean which dictates whether the logs are stored in a git tracked folder. 
 `python src/render-style-transfer.py [keep_logs=False]`
+- trains the model
