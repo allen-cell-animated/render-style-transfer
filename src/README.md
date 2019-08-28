@@ -17,8 +17,6 @@ pip3 install scipy
 - conda install matplotlib
 - conda install -c conda-forge scikit-image
 
-# Run
-
 # to run:
 `python precompute_dataset.py`
 - precomputes a complete dataset
