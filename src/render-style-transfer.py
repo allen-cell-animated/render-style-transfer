@@ -256,8 +256,8 @@ def main(keep_logs):
     # mac paths for shared directory
     # trainset = RenderStyleTransferDataset(root_dir="/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data", train=True)
     # testset = RenderStyleTransferDataset(root_dir="/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data", train=False)
-    trainset = PrecomputedStyleTransferDataset(cache_file="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data/cached/dataset.json", train=True)
-    testset = PrecomputedStyleTransferDataset(cache_file="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data/cached/dataset.json", train=False)
+    trainset = PrecomputedStyleTransferDataset(cache_file="cached/dataset.json", train=True)
+    testset = PrecomputedStyleTransferDataset(cache_file="cached/dataset.json", train=False)
 
     # takes the trainset we defined, loads 4 (default 1) at a time,
     # shuffle=True reshuffles the data every epoch

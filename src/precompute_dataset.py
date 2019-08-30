@@ -1,5 +1,5 @@
 # Precompute data set from source data, and save the rendered images and data set to file
-
+import argparse
 import json
 import os
 from skimage import io
@@ -25,10 +25,9 @@ def img_from_tensor(t):
 def main(
     num_renders=16,
     src_dir="D:/src/aics/render-style-transfer/training_data",
-    cache_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data/cached",
+    cache_dir="cached",
 ):
     dataset = []
-
     # collect up all file paths of png files in src_dir
     all_files = []
     all_files_names = []
@@ -84,4 +83,17 @@ def main(
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Cache dataset options')
+    parser.add_argument(
+        '--src_dir',
+        default='D:/src/aics/render-style-transfer/training_data',
+        help='provide provide the training data directory'
+    )
+    parser.add_argument(
+        '--cache_dir',
+        default='cached',
+        help='provide an directory for the cache, default cached'
+    )
+    options = parser.parse_args()
+    print('in out folders', options)
+    main(16, options.src_dir, options.cache_dir)
