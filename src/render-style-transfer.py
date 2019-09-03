@@ -1,12 +1,13 @@
 # Render style transfer
-
+import sys
 import torch
 import torchvision
 import torchvision.transforms as transforms
 import torch.nn as nn
 import torch.optim as optim
-
+import time
 import matplotlib.pyplot as plt
+import pathlib
 
 from prerendered_dataset import PrecomputedStyleTransferDataset
 from render_dataset import RenderStyleTransferDataset
@@ -14,6 +15,7 @@ from render_dataset import RenderStyleTransferDataset
 from f_style import FStyle
 from f_renderparams import FPsi
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 # Utility functions
 
 # functions to show an image
@@ -43,14 +45,25 @@ def randomly_choose(list_of_stuff):
     return list_of_stuff[perm]
 
 
-def train(f_style, f_psi, trainloader, trainset):
+def train(f_style, f_psi, trainloader, trainset, keep_logs=False):
+    file_name = time.time_ns()
+    if keep_logs:
+        path = 'results'
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+    else:
+        path = 'loss'
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+
+    file_path = f"{path}/{file_name}.csv"
+    f = open(file_path, "w+")
+    f.write("Epoch, index,loss_style,loss_psi,total_loss\n")
+    f.close()
     loss_fn = nn.MSELoss()
     regularization_rate = 1  # aka lambda
     # Implements stochastic gradient descent (optionally with momentum).
     # lr is the learning rate, required
     optimizer = optim.Adam(f_style.parameters(), lr=0.0001)
     number_of_epochs = 1
-
     for epoch in range(number_of_epochs):  # loop over the dataset multiple times
         print(f"epoch {epoch}")
         running_loss = 0.0
@@ -59,10 +72,10 @@ def train(f_style, f_psi, trainloader, trainset):
         for i, data in enumerate(trainloader, 0):
             im_cube, im_2d, im_2d_cube_id, psi = data
 
-            im_cube = im_cube.cuda()
-            im_2d = im_2d.cuda()
-            im_2d_cube_id = im_2d_cube_id.cuda()
-            psi = psi.cuda()
+            im_cube = im_cube.to(device)
+            im_2d = im_2d.to(device)
+            im_2d_cube_id = im_2d_cube_id.to(device)
+            psi = psi.to(device)
 
             batch_of_ids = torch.flatten(im_2d_cube_id)
             # print('batch_of_psis shape:', psi.shape)
@@ -98,7 +111,7 @@ def train(f_style, f_psi, trainloader, trainset):
             loss_psi = loss_fn(psi_hat, psi)
             ###########################################
 
-            loss_style = torch.zeros(1).cuda()
+            loss_style = torch.zeros(1).to(device)
 
             for j, s in enumerate(batch_of_styles):
                 # get all ids that are the same as i
@@ -132,7 +145,12 @@ def train(f_style, f_psi, trainloader, trainset):
             # print("new average loss style", loss_style)
             total_loss = regularization_rate*loss_psi + loss_style
             # print("new average loss psi", loss_psi)
-            print(f"loss: {loss_style.item()} + {regularization_rate*loss_psi.item()} : total {total_loss.item()}")
+            # print(f"loss: {loss_style.item()} + {regularization_rate*loss_psi.item()} : total {total_loss.item()}")
+            
+            # append current loss log with results 
+            f = open(file_path, "a+")
+            f.write(f"{epoch},{i},{loss_style.item()},{regularization_rate*loss_psi.item()},{total_loss.item()}\n")
+            f.close()
 
             total_loss.backward()
 
@@ -146,6 +164,7 @@ def train(f_style, f_psi, trainloader, trainset):
             if i % everyN == everyN - 1:  # print every 10 mini-batches
                 print(f"[{epoch+1}, {i+1}] loss: {running_loss/everyN}")
                 running_loss = 0.0
+
 
 
 def test(f_style, f_psi, testloader):
@@ -225,7 +244,7 @@ def test(f_style, f_psi, testloader):
     print("1")
 
 
-def main():
+def main(keep_logs):
     # Data loader. Combines a dataset and a sampler, and provides single- or multi-process iterators over the dataset.
 
     # train (bool, optional)
@@ -234,8 +253,11 @@ def main():
     # testset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=False)
     # trainset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=True)
     # testset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=False)
-    trainset = PrecomputedStyleTransferDataset(cache_file="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data/cached/dataset.json", train=True)
-    testset = PrecomputedStyleTransferDataset(cache_file="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data/cached/dataset.json", train=False)
+    # mac paths for shared directory
+    # trainset = RenderStyleTransferDataset(root_dir="/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data", train=True)
+    # testset = RenderStyleTransferDataset(root_dir="/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data", train=False)
+    trainset = PrecomputedStyleTransferDataset(cache_file="cached/dataset.json", train=True)
+    testset = PrecomputedStyleTransferDataset(cache_file="cached/dataset.json", train=False)
 
     # takes the trainset we defined, loads 4 (default 1) at a time,
     # shuffle=True reshuffles the data every epoch
@@ -251,10 +273,10 @@ def main():
 
     # Training
 
-    f_style = FStyle().cuda()
-    f_psi = FPsi().cuda()
+    f_style = FStyle().to(device)
+    f_psi = FPsi().to(device)
 
-    train(f_style, f_psi, trainloader, trainset)
+    train(f_style, f_psi, trainloader, trainset, keep_logs)
 
     test(f_style, f_psi, testloader)
 
@@ -263,4 +285,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

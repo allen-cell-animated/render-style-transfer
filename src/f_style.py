@@ -4,23 +4,16 @@ import torch.nn.functional as F
 
 from basic_block import BasicBlock
 from weight_init import weight_init
-### Questions
-
-# 1. This seems very dependent on knowing the starting data size. Is that typical?
-# 2. Are there different architectures for different sized images? Ie, more convolutions or more pools or both? How do you decide the shape and size of these layers too.
 
 # Notes:
-
 # 1. More conv layers, and use stride to down sample as alternative to max pool
 # 2. adaptive average pooling is better than max pool
-
 
 # compute a style representation from a collection of images
 class FStyle(nn.Module):
     def __init__(self):
         super(FStyle, self).__init__()
 
-        # This results in 2 "parameters": 6 learned kernels of size 5x5 per input channel (3) plus 6 learned scalar bias terms
         self.main = nn.Sequential(
             BasicBlock(3, 8, 5),
             BasicBlock(8, 16, 4, 2),
@@ -45,7 +38,6 @@ class FStyle(nn.Module):
 
         # input x: torch.Size([64, 3, 392, 392])
         x = self.main(x)
-
         # torch.Size([64, 16, 19, 19])
         # reshape tensor x to have its second dimension be of size 16*19*19,
         # (to fit into the fc1 ?)

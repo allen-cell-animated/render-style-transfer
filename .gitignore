@@ -2,3 +2,5 @@
 venv/
 training_data/
 __pycache__/
+src/loss
+cached
