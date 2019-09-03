@@ -26,6 +26,7 @@ def main(
     num_renders=16,
     src_dir="D:/src/aics/render-style-transfer/training_data",
     cache_dir="cached",
+    num_psis_per_data_cube=1,
 ):
     dataset = []
     # collect up all file paths of png files in src_dir
@@ -48,32 +49,38 @@ def main(
         image = io.imread(data_file)
 
         # generate a repeatable set of render parameters for our render_function
-        random.seed(a=i)
-        convfilter = [random.random() for k in range(9)]
-
-        # prepare the sampler of camera transforms
-        camera_degree_range = 45.0
-        apply_camera = transforms.RandomRotation(
-            camera_degree_range, resample=PIL.Image.BICUBIC
-        )
-
         # loop to generate a set of images with the same style (render settings) but different camera angles
         images = []
-        for j in range(num_renders):
-            # generate a rendered image of the given style
-            renderedimage = render_function(
-                image.transpose(2, 1, 0), convfilter, apply_camera
+        render_params = []
+        render_ids = []
+        for k in range(num_psis_per_data_cube):
+            render_ids.append(k)
+            random.seed(a=i)
+            convfilter = [random.random() for k in range(9)]
+
+        # prepare the sampler of camera transforms
+            camera_degree_range = 45.0
+            apply_camera = transforms.RandomRotation(
+                camera_degree_range, resample=PIL.Image.BICUBIC
             )
-            outpath = f"{cache_dir}/{filename}_rendered_{j}.png"
-            renderedimage.save(outpath)
-            images.append(outpath)
+   
+            for j in range(num_renders):
+                # generate a rendered image of the given style
+                renderedimage = render_function(
+                    image.transpose(2, 1, 0), convfilter, apply_camera
+                )
+                outpath = f"{cache_dir}/{filename}_rendered_{j}.png"
+                renderedimage.save(outpath)
+                images.append(outpath)
+                render_params.append(convfilter)
 
         # one item from this data set consists of:
         #   an input data image,
         #   a set of images generated with the same render_parameters("style") but different camera angles,
         #   the set of render_parameters
         dataset.append(
-            {"data_file": data_file, "renders": images, "render_params": convfilter}
+            {"data_file": data_file, "renders": images,
+                "render_params": render_params, "render_ids": render_ids}
         )
 
     with open(f"{cache_dir}/dataset.json", "w") as fout:

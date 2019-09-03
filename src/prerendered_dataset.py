@@ -60,8 +60,11 @@ class PrecomputedStyleTransferDataset(Dataset):
         dataset_entry = self.dataset[idx]
         image = io.imread(dataset_entry["data_file"])
 
-        convfilter = dataset_entry["render_params"]
-
+        render_params = dataset_entry["render_params"]
+        render_ids = dataset_entry["render_ids"]
+        renders = dataset_entry["renders"]
+        num_camera_angles_per_psi = int(len(renders)/len(render_ids))
+        print("NUMBER OF CAMERA ANGLES", num_camera_angles_per_psi)
         # loop to generate a set of images with the same style (render settings) but different camera angles
         images = []
         for i, path in enumerate(dataset_entry["renders"]):
@@ -70,10 +73,12 @@ class PrecomputedStyleTransferDataset(Dataset):
             final_image = transforms.functional.to_tensor(renderedimage)
             images.append(final_image)
         images = torch.stack(images)
+
+        # currently equivalent to i/num_camera_angles_per_psi}, but if we want to have unique ids for params other than an index, this works for that
         im_2d_cube_ids = torch.Tensor(
-            [idx for i in range(len(dataset_entry["renders"]))]
+            [idx + render_ids[i//num_camera_angles_per_psi] for i in range(len(dataset_entry["renders"]))]
         )
-        render_params = torch.Tensor(convfilter)
+        render_params = torch.Tensor(render_params)
 
         im_as_tensor = transforms.functional.to_tensor(image)
 
@@ -87,8 +92,9 @@ class PrecomputedStyleTransferDataset(Dataset):
         return sample
 
 
-# testDataset = RenderStyleTransferDataset(root_dir="/thumbnail-dataset")
-# item = testDataset.__getitem__(0)
+# testDataset = PrecomputedStyleTransferDataset(
+#     cache_file="cached/dataset.json", train=True)
+# item = testDataset.__getitem__(1)
 # print(item[0].shape)
 # print(item[1].shape)
 # print(item[2].shape)
