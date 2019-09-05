@@ -30,7 +30,6 @@ def main(
         data_dir, camera_samples, num_psis_per_data_cube, "save", cache_dir, True)
 
     for i, _ in enumerate(train_dataset.all_files):
-        print(i)
         train_dataset.__getitem__(i)
     
     test_dataset = StyleTransferDataset(

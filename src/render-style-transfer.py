@@ -78,7 +78,7 @@ def train(f_style, f_psi, trainloader, trainset, loss_file_name, keep_logs=False
 
             batch_of_ids = torch.flatten(im_2d_cube_ids)
             batch_of_psis = torch.flatten(psi, 0, 1)
-            print('batch_of_psis shape:', batch_of_psis.shape)
+            # print('batch_of_psis shape:', batch_of_psis.shape)
             # combine so that the batch is really batch_size*num_camera_samples
             flattened_im = torch.flatten(im_2d, 0, 1)
             batch_of_styles = f_style(flattened_im)
