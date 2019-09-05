@@ -9,7 +9,7 @@ import time
 import matplotlib.pyplot as plt
 import pathlib
 
-from render_dataset_with_caching import PrecomputedStyleTransferDataset
+from render_dataset_with_caching import StyleTransferDataset
 from render_dataset import RenderStyleTransferDataset
 
 from f_style import FStyle
@@ -256,9 +256,9 @@ def main(loss_file_name, keep_logs):
     # testset = RenderStyleTransferDataset(root_dir="/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data", train=False)
     data_dir = "/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data"
 
-    trainset = PrecomputedStyleTransferDataset(data_dir, cache_setting="load", train=True)
-    testset = PrecomputedStyleTransferDataset(
-        data_dir, cache_setting="load", train=True)
+    trainset = StyleTransferDataset(data_dir, cache_setting="load", train=True)
+    testset = StyleTransferDataset(
+        data_dir, cache_setting="load", train=False)
 
     # takes the trainset we defined, loads 4 (default 1) at a time,
     # shuffle=True reshuffles the data every epoch
