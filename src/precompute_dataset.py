@@ -66,5 +66,5 @@ if __name__ == "__main__":
 
     options = parser.parse_args()
     print('dataset options', options)
-    main(options.data_dir, options.num_camera_renders, options.num_styles_per_image,
+    main(options.data_dir, int(options.num_camera_renders), int(options.num_styles_per_image),
          options.cache_dir)
