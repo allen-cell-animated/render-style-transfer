@@ -102,7 +102,7 @@ class StyleTransferDataset(Dataset):
         # load some input_data for our render_function
         im_2d_cube_ids = []
         images = []
-
+        # print('getting item', idx)
         if self.cache_setting == "load":
             dataset_entry = self.dataset[idx]
             image = io.imread(dataset_entry["data_file"])
