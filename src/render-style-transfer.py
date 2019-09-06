@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import pathlib
 
 from render_dataset_with_caching import StyleTransferDataset
-from render_dataset import RenderStyleTransferDataset
 
 from f_style import FStyle
 from f_renderparams import FPsi
@@ -45,7 +44,7 @@ def randomly_choose(list_of_stuff):
     return list_of_stuff[perm]
 
 
-def train(f_style, f_psi, trainloader, trainset, loss_file_name, keep_logs=False):
+def train(f_style, f_psi, trainloader, loss_file_name, keep_logs=False):
     if keep_logs:
         path = 'results'
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
@@ -247,18 +246,16 @@ def main(loss_file_name, keep_logs):
 
     # train (bool, optional)
     # split the data set based on the value of train into a repeatable 80%-20% split
-    # trainset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=True)
-    # testset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=False)
-    # trainset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=True)
-    # testset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=False)
-    # mac paths for shared directory
-    # trainset = RenderStyleTransferDataset(root_dir="/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data", train=True)
-    # testset = RenderStyleTransferDataset(root_dir="/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data", train=False)
+
+    # mac dir: / Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data
+    # pc dir: // allen/aics/animated-cell/Dan/renderstyletransfer/training_data
+    # dans local dir: D: / src/aics/render-style-transfer/training_data
+
     data_dir = "/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data"
 
-    trainset = StyleTransferDataset(data_dir, cache_setting="load", train=True)
+    trainset = StyleTransferDataset(data_dir, cache_setting="save", train=True)
     testset = StyleTransferDataset(
-        data_dir, cache_setting="load", train=False)
+        data_dir, cache_setting="save", train=False)
 
     # takes the trainset we defined, loads 4 (default 1) at a time,
     # shuffle=True reshuffles the data every epoch
@@ -269,7 +266,7 @@ def main(loss_file_name, keep_logs):
 
     # same as trainloader
     testloader = torch.utils.data.DataLoader(
-        testset, batch_size=4, shuffle=False, num_workers=0
+        testset, batch_size=4, shuffle=True, num_workers=0
     )
 
     # Training
@@ -277,7 +274,7 @@ def main(loss_file_name, keep_logs):
     f_style = FStyle().to(device)
     f_psi = FPsi().to(device)
 
-    train(f_style, f_psi, trainloader, trainset, loss_file_name, keep_logs)
+    train(f_style, f_psi, trainloader, loss_file_name, keep_logs)
 
     test(f_style, f_psi, testloader)
 
