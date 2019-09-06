@@ -1,5 +1,5 @@
 # Render style transfer
-import sys
+import argparse
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -9,8 +9,7 @@ import time
 import matplotlib.pyplot as plt
 import pathlib
 
-from prerendered_dataset import PrecomputedStyleTransferDataset
-from render_dataset import RenderStyleTransferDataset
+from render_dataset_with_caching import StyleTransferDataset
 
 from f_style import FStyle
 from f_renderparams import FPsi
@@ -45,8 +44,7 @@ def randomly_choose(list_of_stuff):
     return list_of_stuff[perm]
 
 
-def train(f_style, f_psi, trainloader, trainset, keep_logs=False):
-    file_name = time.time_ns()
+def train(f_style, f_psi, trainloader, loss_file_name, keep_logs=False):
     if keep_logs:
         path = 'results'
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
@@ -54,7 +52,7 @@ def train(f_style, f_psi, trainloader, trainset, keep_logs=False):
         path = 'loss'
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
 
-    file_path = f"{path}/{file_name}.csv"
+    file_path = f"{path}/{loss_file_name}.csv"
     f = open(file_path, "w+")
     f.write("Epoch, index,loss_style,loss_psi,total_loss\n")
     f.close()
@@ -70,16 +68,16 @@ def train(f_style, f_psi, trainloader, trainset, keep_logs=False):
         # trainloader is the method that gets 4 examples out of the training dataset at a time
         # each epoch trainloader will shuffle the data because we told it to
         for i, data in enumerate(trainloader, 0):
-            im_cube, im_2d, im_2d_cube_id, psi = data
+            im_cube, im_2d, im_2d_cube_ids, psi = data
 
             im_cube = im_cube.to(device)
             im_2d = im_2d.to(device)
-            im_2d_cube_id = im_2d_cube_id.to(device)
+            im_2d_cube_ids = im_2d_cube_ids.to(device)
             psi = psi.to(device)
 
-            batch_of_ids = torch.flatten(im_2d_cube_id)
-            # print('batch_of_psis shape:', psi.shape)
-
+            batch_of_ids = torch.flatten(im_2d_cube_ids)
+            batch_of_psis = torch.flatten(psi, 0, 1)
+            # print('batch_of_psis shape:', batch_of_psis.shape)
             # combine so that the batch is really batch_size*num_camera_samples
             flattened_im = torch.flatten(im_2d, 0, 1)
             batch_of_styles = f_style(flattened_im)
@@ -105,22 +103,21 @@ def train(f_style, f_psi, trainloader, trainset, keep_logs=False):
             perm = torch.randint(f_psi.num_camera_samples, (im_cube.size(0),))
             for j in range(perm.size(0)):
                 perm[j] += j*f_psi.num_camera_samples
+
             small_batch_of_styles = batch_of_styles[perm]
 
             psi_hat = f_psi(im_cube, small_batch_of_styles)
-            loss_psi = loss_fn(psi_hat, psi)
+            loss_psi = loss_fn(psi_hat, batch_of_psis[perm])
             ###########################################
 
             loss_style = torch.zeros(1).to(device)
 
             for j, s in enumerate(batch_of_styles):
                 # get all ids that are the same as i
-
-                p = j // f_psi.num_camera_samples
-                current_im_id = im_2d_cube_id[p][0]
+                current_im_id = batch_of_ids[j]
+                # print('current_im_id', current_im_id)
                 list_of_same_ids = (batch_of_ids == current_im_id).nonzero().flatten()
-
-                # print(list_of_same_ids)
+                # print('list_of_same_ids', list_of_same_ids)
                 # pick one
                 index_with_id_same = randomly_choose(list_of_same_ids)
                 # get all ids that are different than i
@@ -244,20 +241,21 @@ def test(f_style, f_psi, testloader):
     print("1")
 
 
-def main(keep_logs):
+def main(loss_file_name, keep_logs):
     # Data loader. Combines a dataset and a sampler, and provides single- or multi-process iterators over the dataset.
 
     # train (bool, optional)
     # split the data set based on the value of train into a repeatable 80%-20% split
-    # trainset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=True)
-    # testset = RenderStyleTransferDataset(root_dir="//allen/aics/animated-cell/Dan/renderstyletransfer/training_data", train=False)
-    # trainset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=True)
-    # testset = RenderStyleTransferDataset(root_dir="D:/src/aics/render-style-transfer/training_data", train=False)
-    # mac paths for shared directory
-    # trainset = RenderStyleTransferDataset(root_dir="/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data", train=True)
-    # testset = RenderStyleTransferDataset(root_dir="/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data", train=False)
-    trainset = PrecomputedStyleTransferDataset(cache_file="cached/dataset.json", train=True)
-    testset = PrecomputedStyleTransferDataset(cache_file="cached/dataset.json", train=False)
+
+    # mac dir: / Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data
+    # pc dir: // allen/aics/animated-cell/Dan/renderstyletransfer/training_data
+    # dans local dir: D: / src/aics/render-style-transfer/training_data
+
+    data_dir = "/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data"
+
+    trainset = StyleTransferDataset(data_dir, cache_setting="save", train=True)
+    testset = StyleTransferDataset(
+        data_dir, cache_setting="save", train=False)
 
     # takes the trainset we defined, loads 4 (default 1) at a time,
     # shuffle=True reshuffles the data every epoch
@@ -268,7 +266,7 @@ def main(keep_logs):
 
     # same as trainloader
     testloader = torch.utils.data.DataLoader(
-        testset, batch_size=4, shuffle=False, num_workers=0
+        testset, batch_size=4, shuffle=True, num_workers=0
     )
 
     # Training
@@ -276,7 +274,7 @@ def main(keep_logs):
     f_style = FStyle().to(device)
     f_psi = FPsi().to(device)
 
-    train(f_style, f_psi, trainloader, trainset, keep_logs)
+    train(f_style, f_psi, trainloader, loss_file_name, keep_logs)
 
     test(f_style, f_psi, testloader)
 
@@ -285,4 +283,17 @@ def main(keep_logs):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    parser = argparse.ArgumentParser(description='Style transfer options')
+    parser.add_argument(
+        '--save_loss_file',
+        default=False,
+        help='if set to true, will check in result to git'
+    )
+    parser.add_argument(
+        '--loss_file_name',
+        default=time.time_ns(),
+        help='file name of loss log'
+    )
+    options = parser.parse_args()
+    print('loss log options', options)
+    main(options.loss_file_name, options.save_loss_file)
