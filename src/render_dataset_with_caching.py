@@ -17,7 +17,7 @@ from render_function import render_function
 
 # Setting up dataset and data loader
 
-# Our dataset transforms the data on the fly.
+# Our dataset can either transform the data on the fly, load from a cache, or save to a cache.
 
 # It has a render method that takes in input image data, render params and camera restrictions.
 
@@ -27,8 +27,8 @@ from render_function import render_function
 
 # 1. im_as_tensor (input data cube as tensor)
 # 2. images (camera_samples images)
-# 3. im_2d_cube_ids (array of length camera_samples, all with the same cube id)
-# 4. render_params (array of length camera_samples, all with the same render parameters)
+# 3. im_2d_cube_ids (array of length camera_samples * num_psis_per_data_cube, with an id of image idx + psi idx)
+# 4. render_params (array of length camera_samples * num_psis_per_data_cube, with num_psis_per_data_cube number of different render parameters)
 
 # cache_setting options: load (load from cache), save (save results of rendering), none (do nothing)
 
