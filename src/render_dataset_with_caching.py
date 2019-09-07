@@ -32,6 +32,8 @@ from render_function import render_function
 
 # cache_setting options: load (load from cache), save (save results of rendering), none (do nothing)
 
+def get_random_color():
+    return [random.randint(0,255) for i in range(3)]
 
 class StyleTransferDataset(Dataset):
     def __init__(self, data_dir, camera_samples=16, num_psis_per_data_cube=2, cache_setting="save", cache_dir="cached", train=True):
@@ -106,6 +108,10 @@ class StyleTransferDataset(Dataset):
         if self.cache_setting == "load":
             dataset_entry = self.dataset[idx]
             image = io.imread(dataset_entry["data_file"])
+
+            # making the images all start as gray scale so color is always a parameter
+            image = transforms.functional.to_grayscale(
+                image, num_output_channels=3)
             render_params = dataset_entry["render_params"]
             render_ids = dataset_entry["render_ids"]
             renders = dataset_entry["renders"]
@@ -122,6 +128,13 @@ class StyleTransferDataset(Dataset):
         else: 
             img_name = os.path.join(self.data_dir, self.all_files[idx])
             image = io.imread(img_name)
+
+            # making the images all start as gray scale so color is always a parameter
+            image = transforms.functional.to_pil_image(
+                image, mode=None)
+
+            image = transforms.functional.to_grayscale(
+                image, num_output_channels=3)
             render_params = []
             render_ids = [i for i in range(self.num_psis_per_data_cube)]
             images_names = []
@@ -136,15 +149,25 @@ class StyleTransferDataset(Dataset):
             for k in range(self.num_psis_per_data_cube):
                 # generate a repeatable set of render parameters for our render_function
                 random.seed(a=(idx + k))
-                convfilter = [random.random() for i in range(9)]
+                brightness = random.uniform(1.0, 1.5)
+                contrast = random.uniform(1.0, 2.0)
+                gamma = random.uniform(0.5, 2.0)
+                # hue = random.uniform(-0.5, 0.5)
+                # saturation = random.uniform(0.0, 2.0)
+                cp_1 = get_random_color()
+                cp_2 = get_random_color()
+                cp_3 = get_random_color()
+
+                params = [brightness, contrast, gamma, *cp_1, *cp_2, *cp_3]
 
                 for j in range(self.camera_samples):
                     # generate a rendered image of the given style
-                    renderedimage = render_function(image.transpose(2, 1, 0), convfilter, apply_camera)
+                    renderedimage = render_function(
+                        image, params, apply_camera)
                     final_image = transforms.functional.to_tensor(renderedimage)
                     images.append(final_image)
                     im_2d_cube_ids.append(idx + render_ids[j//int(self.camera_samples)])
-                    render_params.append(convfilter)
+                    render_params.append(params)
                     
                     if self.cache_setting == "save":
                         outpath = f"{self.cache_dir}/{self.all_files[idx]}_rendered_{j}_{k}.png"
