@@ -7,7 +7,7 @@ from weight_init import weight_init
 
 # compute a set of render parameters (psi) given an input_data and style
 class FPsi(nn.Module):
-    def __init__(self, num_render_params=9, num_camera_samples=16):
+    def __init__(self, num_render_params=12, num_camera_samples=16):
         super(FPsi, self).__init__()
         self.num_render_params = num_render_params
         self.num_camera_samples = num_camera_samples        
