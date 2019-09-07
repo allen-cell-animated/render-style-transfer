@@ -253,9 +253,9 @@ def main(loss_file_name, keep_logs):
 
     data_dir = "/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data"
 
-    trainset = StyleTransferDataset(data_dir, cache_setting="save", train=True)
+    trainset = StyleTransferDataset(data_dir, cache_setting="load", train=True)
     testset = StyleTransferDataset(
-        data_dir, cache_setting="save", train=False)
+        data_dir, cache_setting="load", train=False)
 
     # takes the trainset we defined, loads 4 (default 1) at a time,
     # shuffle=True reshuffles the data every epoch
