@@ -110,6 +110,8 @@ class StyleTransferDataset(Dataset):
             image = io.imread(dataset_entry["data_file"])
 
             # making the images all start as gray scale so color is always a parameter
+            image = transforms.functional.to_pil_image(
+                image, mode=None)
             image = transforms.functional.to_grayscale(
                 image, num_output_channels=3)
             render_params = dataset_entry["render_params"]
