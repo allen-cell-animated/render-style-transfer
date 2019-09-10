@@ -9,15 +9,12 @@ import time
 import matplotlib.pyplot as plt
 import pathlib
 
-from render_dataset_with_caching import StyleTransferDataset
+from dataset import StyleTransferDataset
 
 from f_style import FStyle
-from f_renderparams import FPsi
+from f_psi import FPsi
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-# Utility functions
-
-# functions to show an image
 
 
 # pil image or ndarray
@@ -45,6 +42,9 @@ def randomly_choose(list_of_stuff):
 
 
 def train(f_style, f_psi, trainloader, loss_file_name, keep_logs=False):
+    num_camera_samples = trainloader.dataset.camera_samples
+    print("camera samples: " + str(num_camera_samples))
+
     if keep_logs:
         path = 'results'
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
@@ -99,10 +99,10 @@ def train(f_style, f_psi, trainloader, loss_file_name, keep_logs=False):
 
             ############################################
             # choose a batch of styles to pass to f_psi
-            # by picking one from each sub-batch 
-            perm = torch.randint(f_psi.num_camera_samples, (im_cube.size(0),))
+            # by picking one from each sub-batch
+            perm = torch.randint(num_camera_samples, (im_cube.size(0),))
             for j in range(perm.size(0)):
-                perm[j] += j*f_psi.num_camera_samples
+                perm[j] += j * num_camera_samples
 
             small_batch_of_styles = batch_of_styles[perm]
 
@@ -140,11 +140,11 @@ def train(f_style, f_psi, trainloader, loss_file_name, keep_logs=False):
             # print("new total loss style", loss_style)
             loss_style = loss_style / len(batch_of_styles)
             # print("new average loss style", loss_style)
-            total_loss = regularization_rate*loss_psi + loss_style
+            total_loss = regularization_rate * loss_psi + loss_style
             # print("new average loss psi", loss_psi)
             # print(f"loss: {loss_style.item()} + {regularization_rate*loss_psi.item()} : total {total_loss.item()}")
-            
-            # append current loss log with results 
+
+            # append current loss log with results
             f = open(file_path, "a+")
             f.write(f"{epoch},{i},{loss_style.item()},{regularization_rate*loss_psi.item()},{total_loss.item()}\n")
             f.close()
@@ -163,21 +163,34 @@ def train(f_style, f_psi, trainloader, loss_file_name, keep_logs=False):
                 running_loss = 0.0
 
 
-
 def test(f_style, f_psi, testloader):
-    # TODO after running train
+    print("test")
+    num_camera_samples = testloader.dataset.camera_samples
 
     # test trained model:
 
     dataiter = iter(testloader)
     # grab batch of four images again but from data it hasn't seen before
-    im_cube, im_2d, im_2d_cube_id, psi = dataiter.next()
+    im_cube, im_2d, im_2d_cube_ids, psi = dataiter.next()
+
+    im_cube = im_cube.to(device)
+    im_2d = im_2d.to(device)
+    im_2d_cube_ids = im_2d_cube_ids.to(device)
+    psi = psi.to(device)
 
     with torch.no_grad():
-        computed_style = f_style(im_2d)
-        computed_psi = f_psi(im_cube, computed_style)
-        for i in range(computed_psi.shape()[0]):
-            t = torch.dist(computed_psi[i], psi)
+        flattened_im = torch.flatten(im_2d, 0, 1)
+        batch_of_styles = f_style(flattened_im)
+
+        perm = torch.randint(num_camera_samples, (im_cube.size(0),))
+        for j in range(perm.size(0)):
+            perm[j] += j * num_camera_samples
+
+        small_batch_of_styles = batch_of_styles[perm]
+        computed_psi = f_psi(im_cube, small_batch_of_styles)
+
+        for i in range(computed_psi.shape[0]):
+            t = torch.dist(computed_psi[i], psi[i])
             print(t)
 
     # # print images
@@ -241,7 +254,7 @@ def test(f_style, f_psi, testloader):
     print("1")
 
 
-def main(loss_file_name, keep_logs):
+def main(loss_file_name, keep_logs, use_cached=True):
     # Data loader. Combines a dataset and a sampler, and provides single- or multi-process iterators over the dataset.
 
     # train (bool, optional)
@@ -251,11 +264,13 @@ def main(loss_file_name, keep_logs):
     # pc dir: // allen/aics/animated-cell/Dan/renderstyletransfer/training_data
     # dans local dir: D: / src/aics/render-style-transfer/training_data
 
-    data_dir = "/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data"
+    data_dir = "D:/src/aics/render-style-transfer/training_data"
 
-    trainset = StyleTransferDataset(data_dir, cache_setting="save", train=True)
+    # data_dir = "/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data"
+
+    trainset = StyleTransferDataset(data_dir, cache_setting="load" if use_cached else "none", train=True)
     testset = StyleTransferDataset(
-        data_dir, cache_setting="save", train=False)
+        data_dir, cache_setting="load" if use_cached else "none", train=False)
 
     # takes the trainset we defined, loads 4 (default 1) at a time,
     # shuffle=True reshuffles the data every epoch
@@ -281,7 +296,6 @@ def main(loss_file_name, keep_logs):
     print("Finished Training")
 
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Style transfer options')
     parser.add_argument(
@@ -294,6 +308,12 @@ if __name__ == "__main__":
         default=time.time_ns(),
         help='file name of loss log'
     )
+    parser.add_argument(
+        '--ignore_cache',
+        action='store_true',
+        help='load dataset from precached data'
+    )
     options = parser.parse_args()
     print('loss log options', options)
-    main(options.loss_file_name, options.save_loss_file)
+    print("cuda:0" if torch.cuda.is_available() else "cpu")
+    main(options.loss_file_name, options.save_loss_file, not options.ignore_cache)

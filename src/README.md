@@ -22,5 +22,5 @@ pip3 install scipy
 - precomputes a complete dataset
 
 Run render-style-transfer with optional boolean which dictates whether the logs are stored in a git tracked folder. 
-`python render-style-transfer.py [keep_logs=False]`
+`python main.py [keep_logs=False]`
 - trains the model

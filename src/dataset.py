@@ -1,6 +1,4 @@
-import itertools
 import os
-import random
 import json
 
 from skimage import io
@@ -9,7 +7,6 @@ import PIL
 # from PIL import Image
 
 import torch
-import torch.nn.functional as F
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 
@@ -44,7 +41,8 @@ class StyleTransferDataset(Dataset):
 
         # TODO point this to /allen file system data sets
         self.data_dir = data_dir
-        self.cache_file = f"{cache_dir}/dataset.json"
+        self.filename = "dataset_train.json" if train else "dataset_test.json"
+        self.cache_file = f"{cache_dir}/{self.filename}"
         self.cache_dir = cache_dir
         self.camera_samples = camera_samples
         self.cache_setting = cache_setting
@@ -58,22 +56,22 @@ class StyleTransferDataset(Dataset):
             print('loading file list from directory')
             self.load_from_data_dir()
             if self.cache_setting == "save":
-                with open(f"{cache_dir}/dataset.json", "w") as fout:
+                with open(f"{cache_dir}/{self.filename}", "w") as fout:
                     json.dump([], fout)
 
-        count = len(self.all_files)
-        training_set_count=int(count * 0.8)
-        test_set_count = len(self.all_files) - training_set_count
-        
-        if train:
-            self.all_files = self.all_files[:training_set_count]
-        else:
-            self.all_files = self.all_files[-test_set_count:]
+            count = len(self.all_files)
+            training_set_count = int(count * 0.8)
+            test_set_count = len(self.all_files) - training_set_count
+
+            if train:
+                self.all_files = self.all_files[:training_set_count]
+            else:
+                self.all_files = self.all_files[-test_set_count:]
 
         self.num_files = len(self.all_files)
         print("RenderStyleTransferDataset created with size: " + str(self.num_files))
 
-    def load_from_dataset_file(self): 
+    def load_from_dataset_file(self):
         with open(self.cache_file, "r") as read_file:
             self.dataset = json.load(read_file)
             self.all_files = list(map(lambda x: x["data_file"], self.dataset))
@@ -92,7 +90,7 @@ class StyleTransferDataset(Dataset):
         dataset.append({"data_file": img_name, "renders": images_names,
                         "render_params": render_params, "render_ids": render_ids})
 
-        with open(f"{self.cache_dir}/dataset.json", "w") as fout:
+        with open(f"{self.cache_dir}/{self.filename}", "w") as fout:
             json.dump(dataset, fout)
 
     def __len__(self):
@@ -106,6 +104,12 @@ class StyleTransferDataset(Dataset):
         if self.cache_setting == "load":
             dataset_entry = self.dataset[idx]
             image = io.imread(dataset_entry["data_file"])
+
+            # making the images all start as gray scale so color is always a parameter
+            image = transforms.functional.to_pil_image(
+                image, mode=None)
+            image = transforms.functional.to_grayscale(
+                image, num_output_channels=3)
             render_params = dataset_entry["render_params"]
             render_ids = dataset_entry["render_ids"]
             renders = dataset_entry["renders"]
@@ -117,11 +121,25 @@ class StyleTransferDataset(Dataset):
                 final_image = transforms.functional.to_tensor(renderedimage)
                 images.append(final_image)
                 im_2d_cube_ids.append(
-                    idx + render_ids[i//int(self.camera_samples)])
+                    idx + render_ids[i // int(self.camera_samples)])
 
-        else: 
+        else:
             img_name = os.path.join(self.data_dir, self.all_files[idx])
             image = io.imread(img_name)
+
+            # making the images all start as gray scale so color is always a parameter
+            image = transforms.functional.to_pil_image(
+                image, mode=None)
+
+            image = transforms.functional.to_grayscale(
+                image, num_output_channels=3)
+
+            image = transforms.functional.resize(image, (32, 32))
+
+            if self.cache_setting == "save":
+                original_outpath = f"{self.cache_dir}/{self.all_files[idx]}_original.png"
+                image.save(original_outpath)
+
             render_params = []
             render_ids = [i for i in range(self.num_psis_per_data_cube)]
             images_names = []
@@ -133,28 +151,28 @@ class StyleTransferDataset(Dataset):
             )
 
             # loop to generate a set of images with different styles and different camera angles
+            the_render_function = render_function()
+
             for k in range(self.num_psis_per_data_cube):
-                # generate a repeatable set of render parameters for our render_function
-                random.seed(a=(idx + k))
-                convfilter = [random.random() for i in range(9)]
+                params = the_render_function.get_random_params(idx + k)
 
                 for j in range(self.camera_samples):
                     # generate a rendered image of the given style
-                    renderedimage = render_function(image.transpose(2, 1, 0), convfilter, apply_camera)
+                    renderedimage = the_render_function.render(
+                        image, params, apply_camera)
                     final_image = transforms.functional.to_tensor(renderedimage)
                     images.append(final_image)
-                    im_2d_cube_ids.append(idx + render_ids[j//int(self.camera_samples)])
-                    render_params.append(convfilter)
-                    
+                    im_2d_cube_ids.append(idx + render_ids[j // int(self.camera_samples)])
+                    render_params.append(the_render_function.normalize_render_params(params))
+
                     if self.cache_setting == "save":
                         outpath = f"{self.cache_dir}/{self.all_files[idx]}_rendered_{j}_{k}.png"
                         images_names.append(outpath)
                         renderedimage.save(outpath)
 
-
             if self.cache_setting == "save":
-                self.save_to_dataset_file(img_name, images_names, render_params, render_ids)
-    
+                self.save_to_dataset_file(original_outpath, images_names, render_params, render_ids)
+
         images = torch.stack(images)
         im_as_tensor = transforms.functional.to_tensor(image)
         im_2d_cube_ids = torch.Tensor(im_2d_cube_ids)

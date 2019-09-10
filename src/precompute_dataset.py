@@ -1,20 +1,10 @@
 # Precompute data set from source data, and save the rendered images and data set to file
 import argparse
-import json
-import os
-from skimage import io
-import PIL
-import random
 
-import torch
-import torchvision
 import torchvision.transforms as transforms
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
 
-from render_dataset_with_caching import StyleTransferDataset
-from render_function import render_function
+from dataset import StyleTransferDataset
+
 
 def img_from_tensor(t):
     return transforms.functional.to_pil_image(t, mode=None)
@@ -31,12 +21,14 @@ def main(
 
     for i, _ in enumerate(train_dataset.all_files):
         train_dataset.__getitem__(i)
-    
+        print(str(i))
+
     test_dataset = StyleTransferDataset(
-            data_dir, camera_samples, num_psis_per_data_cube, "save", cache_dir, False)
+        data_dir, camera_samples, num_psis_per_data_cube, "save", cache_dir, False)
 
     for j, _ in enumerate(test_dataset.all_files):
         test_dataset.__getitem__(j)
+        print(str(j))
 
     print("Done!")
 
