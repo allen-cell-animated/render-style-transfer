@@ -291,19 +291,6 @@ def main(loss_file_name, keep_logs, use_cached=True):
 
     train(f_style, f_psi, trainloader, loss_file_name, keep_logs)
 
-    # save the trained model
-    pathlib.Path("./model/").mkdir(parents=True, exist_ok=True)
-    torch.save(f_style.state_dict(), "./model/fstyle.pt")
-    torch.save(f_psi.state_dict(), "./model/fpsi.pt")
-
-    # load the existing model
-    f_style = FStyle().to(device)
-    f_style.load_state_dict(torch.load("./model/fstyle.pt"))
-    f_style.eval()
-    f_psi = FPsi().to(device)
-    f_psi.load_state_dict(torch.load("./model/fpsi.pt"))
-    f_psi.eval()
-
     test(f_style, f_psi, testloader)
 
     print("Finished Training")
