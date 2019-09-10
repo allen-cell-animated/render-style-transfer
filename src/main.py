@@ -164,19 +164,33 @@ def train(f_style, f_psi, trainloader, loss_file_name, keep_logs=False):
 
 
 def test(f_style, f_psi, testloader):
-    # TODO after running train
+    print("test")
+    num_camera_samples = testloader.dataset.camera_samples
 
     # test trained model:
 
     dataiter = iter(testloader)
     # grab batch of four images again but from data it hasn't seen before
-    im_cube, im_2d, im_2d_cube_id, psi = dataiter.next()
+    im_cube, im_2d, im_2d_cube_ids, psi = dataiter.next()
+
+    im_cube = im_cube.to(device)
+    im_2d = im_2d.to(device)
+    im_2d_cube_ids = im_2d_cube_ids.to(device)
+    psi = psi.to(device)
 
     with torch.no_grad():
-        computed_style = f_style(im_2d)
-        computed_psi = f_psi(im_cube, computed_style)
-        for i in range(computed_psi.shape()[0]):
-            t = torch.dist(computed_psi[i], psi)
+        flattened_im = torch.flatten(im_2d, 0, 1)
+        batch_of_styles = f_style(flattened_im)
+
+        perm = torch.randint(num_camera_samples, (im_cube.size(0),))
+        for j in range(perm.size(0)):
+            perm[j] += j * num_camera_samples
+
+        small_batch_of_styles = batch_of_styles[perm]
+        computed_psi = f_psi(im_cube, small_batch_of_styles)
+
+        for i in range(computed_psi.shape[0]):
+            t = torch.dist(computed_psi[i], psi[i])
             print(t)
 
     # # print images
@@ -276,6 +290,19 @@ def main(loss_file_name, keep_logs, use_cached=True):
     f_psi = FPsi().to(device)
 
     train(f_style, f_psi, trainloader, loss_file_name, keep_logs)
+
+    # save the trained model
+    pathlib.Path("./model/").mkdir(parents=True, exist_ok=True)
+    torch.save(f_style.state_dict(), "./model/fstyle.pt")
+    torch.save(f_psi.state_dict(), "./model/fpsi.pt")
+
+    # load the existing model
+    f_style = FStyle().to(device)
+    f_style.load_state_dict(torch.load("./model/fstyle.pt"))
+    f_style.eval()
+    f_psi = FPsi().to(device)
+    f_psi.load_state_dict(torch.load("./model/fpsi.pt"))
+    f_psi.eval()
 
     test(f_style, f_psi, testloader)
 
