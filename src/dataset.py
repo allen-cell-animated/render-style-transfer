@@ -1,6 +1,4 @@
-import itertools
 import os
-import random
 import json
 
 from skimage import io
@@ -9,7 +7,6 @@ import PIL
 # from PIL import Image
 
 import torch
-import torch.nn.functional as F
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 
@@ -65,7 +62,7 @@ class StyleTransferDataset(Dataset):
             count = len(self.all_files)
             training_set_count = int(count * 0.8)
             test_set_count = len(self.all_files) - training_set_count
-            
+
             if train:
                 self.all_files = self.all_files[:training_set_count]
             else:
@@ -136,7 +133,7 @@ class StyleTransferDataset(Dataset):
 
             image = transforms.functional.to_grayscale(
                 image, num_output_channels=3)
-            
+
             image = transforms.functional.resize(image, (32, 32))
 
             if self.cache_setting == "save":
@@ -167,7 +164,7 @@ class StyleTransferDataset(Dataset):
                     images.append(final_image)
                     im_2d_cube_ids.append(idx + render_ids[j // int(self.camera_samples)])
                     render_params.append(the_render_function.normalize_render_params(params))
-                    
+
                     if self.cache_setting == "save":
                         outpath = f"{self.cache_dir}/{self.all_files[idx]}_rendered_{j}_{k}.png"
                         images_names.append(outpath)
@@ -175,7 +172,7 @@ class StyleTransferDataset(Dataset):
 
             if self.cache_setting == "save":
                 self.save_to_dataset_file(original_outpath, images_names, render_params, render_ids)
-    
+
         images = torch.stack(images)
         im_as_tensor = transforms.functional.to_tensor(image)
         im_2d_cube_ids = torch.Tensor(im_2d_cube_ids)

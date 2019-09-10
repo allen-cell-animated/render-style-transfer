@@ -99,10 +99,10 @@ def train(f_style, f_psi, trainloader, loss_file_name, keep_logs=False):
 
             ############################################
             # choose a batch of styles to pass to f_psi
-            # by picking one from each sub-batch 
+            # by picking one from each sub-batch
             perm = torch.randint(num_camera_samples, (im_cube.size(0),))
             for j in range(perm.size(0)):
-                perm[j] += j*num_camera_samples
+                perm[j] += j * num_camera_samples
 
             small_batch_of_styles = batch_of_styles[perm]
 
@@ -140,11 +140,11 @@ def train(f_style, f_psi, trainloader, loss_file_name, keep_logs=False):
             # print("new total loss style", loss_style)
             loss_style = loss_style / len(batch_of_styles)
             # print("new average loss style", loss_style)
-            total_loss = regularization_rate*loss_psi + loss_style
+            total_loss = regularization_rate * loss_psi + loss_style
             # print("new average loss psi", loss_psi)
             # print(f"loss: {loss_style.item()} + {regularization_rate*loss_psi.item()} : total {total_loss.item()}")
-            
-            # append current loss log with results 
+
+            # append current loss log with results
             f = open(file_path, "a+")
             f.write(f"{epoch},{i},{loss_style.item()},{regularization_rate*loss_psi.item()},{total_loss.item()}\n")
             f.close()
@@ -161,7 +161,6 @@ def train(f_style, f_psi, trainloader, loss_file_name, keep_logs=False):
             if i % everyN == everyN - 1:  # print every 10 mini-batches
                 print(f"[{epoch+1}, {i+1}] loss: {running_loss/everyN}")
                 running_loss = 0.0
-
 
 
 def test(f_style, f_psi, testloader):
@@ -281,7 +280,6 @@ def main(loss_file_name, keep_logs, use_cached=True):
     test(f_style, f_psi, testloader)
 
     print("Finished Training")
-
 
 
 if __name__ == "__main__":

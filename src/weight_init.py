@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:UTF-8 -*-
 
-import torch
 import torch.nn as nn
 import torch.nn.init as init
 

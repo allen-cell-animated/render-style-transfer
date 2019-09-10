@@ -18,7 +18,7 @@ def create_map(control_point_1, control_point_2, control_point_3):
     control_point_0 = (0, 0, 0)
     map = [control_point_0]
     stop_0 = 0
-    stop_1 = int(255/3)
+    stop_1 = int(255 / 3)
     stop_2 = int(stop_1 * 2)
     stop_3 = 255
     for i in range(1, 256):
@@ -28,7 +28,7 @@ def create_map(control_point_1, control_point_2, control_point_3):
         elif (i < stop_2):
             alpha = (i - stop_1) / (stop_2 - stop_1)
             new_color = get_color(control_point_1, control_point_2, alpha)
-        else: 
+        else:
             alpha = (i - stop_2) / (stop_3 - stop_2)
             new_color = get_color(control_point_2, control_point_3, alpha)
         map.append(new_color)
@@ -131,9 +131,7 @@ class render_function:
         #     renderedimage, render_params[3])
         # renderedimage = transforms.functional.adjust_saturation(
         #     renderedimage, render_params[4])
-        
 
-        
         # # normalize back to displayable range after convolution
         # maxval = renderedimage.max()
         # renderedimage = transforms.functional.normalize(
