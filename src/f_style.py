@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -9,20 +8,21 @@ from weight_init import weight_init
 # 1. More conv layers, and use stride to down sample as alternative to max pool
 # 2. adaptive average pooling is better than max pool
 
+
 # compute a style representation from a collection of images
 class FStyle(nn.Module):
     def __init__(self):
         super(FStyle, self).__init__()
 
         self.main = nn.Sequential(
-            BasicBlock(3, 8, 5),
-            BasicBlock(8, 16, 4, 2),
-            BasicBlock(16, 32, 4, 2),
-            BasicBlock(32, 64, 4, 2),
-            BasicBlock(64, 128, 4, 2),
+            BasicBlock(3, 8, 5, 1),
+            BasicBlock(8, 16, 4, 1),
+            BasicBlock(16, 32, 4, 1),
+            BasicBlock(32, 64, 4, 1),
+            BasicBlock(64, 128, 4, 1),
             BasicBlock(128, 512, 4, 2),
             BasicBlock(512, 512, 4, 2),
-            BasicBlock(512, 512, 4, 2)
+            BasicBlock(512, 512, 2, 1)
         )
         self.fc1 = nn.Linear(512, 512)
         self.fc2 = nn.Linear(512, 512)
@@ -30,7 +30,6 @@ class FStyle(nn.Module):
 
         self.out = nn.Sigmoid()
         self.apply(weight_init)
-        
 
     # running data through the network
     def forward(self, x):

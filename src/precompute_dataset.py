@@ -13,7 +13,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from render_dataset_with_caching import StyleTransferDataset
+from dataset import StyleTransferDataset
 from render_function import render_function
 
 def img_from_tensor(t):
@@ -31,12 +31,14 @@ def main(
 
     for i, _ in enumerate(train_dataset.all_files):
         train_dataset.__getitem__(i)
+        print(str(i))
     
     test_dataset = StyleTransferDataset(
             data_dir, camera_samples, num_psis_per_data_cube, "save", cache_dir, False)
 
     for j, _ in enumerate(test_dataset.all_files):
         test_dataset.__getitem__(j)
+        print(str(j))
 
     print("Done!")
 

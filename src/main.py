@@ -9,15 +9,12 @@ import time
 import matplotlib.pyplot as plt
 import pathlib
 
-from render_dataset_with_caching import StyleTransferDataset
+from dataset import StyleTransferDataset
 
 from f_style import FStyle
-from f_renderparams import FPsi
+from f_psi import FPsi
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-# Utility functions
-
-# functions to show an image
 
 
 # pil image or ndarray
@@ -45,6 +42,9 @@ def randomly_choose(list_of_stuff):
 
 
 def train(f_style, f_psi, trainloader, loss_file_name, keep_logs=False):
+    num_camera_samples = trainloader.dataset.camera_samples
+    print("camera samples: " + str(num_camera_samples))
+
     if keep_logs:
         path = 'results'
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
@@ -100,9 +100,9 @@ def train(f_style, f_psi, trainloader, loss_file_name, keep_logs=False):
             ############################################
             # choose a batch of styles to pass to f_psi
             # by picking one from each sub-batch 
-            perm = torch.randint(f_psi.num_camera_samples, (im_cube.size(0),))
+            perm = torch.randint(num_camera_samples, (im_cube.size(0),))
             for j in range(perm.size(0)):
-                perm[j] += j*f_psi.num_camera_samples
+                perm[j] += j*num_camera_samples
 
             small_batch_of_styles = batch_of_styles[perm]
 
@@ -241,7 +241,7 @@ def test(f_style, f_psi, testloader):
     print("1")
 
 
-def main(loss_file_name, keep_logs):
+def main(loss_file_name, keep_logs, use_cached=True):
     # Data loader. Combines a dataset and a sampler, and provides single- or multi-process iterators over the dataset.
 
     # train (bool, optional)
@@ -251,11 +251,13 @@ def main(loss_file_name, keep_logs):
     # pc dir: // allen/aics/animated-cell/Dan/renderstyletransfer/training_data
     # dans local dir: D: / src/aics/render-style-transfer/training_data
 
-    data_dir = "/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data"
+    data_dir = "D:/src/aics/render-style-transfer/training_data"
 
-    trainset = StyleTransferDataset(data_dir, cache_setting="load", train=True)
+    # data_dir = "/Volumes/aics/animated-cell/Dan/renderstyletransfer/training_data"
+
+    trainset = StyleTransferDataset(data_dir, cache_setting="load" if use_cached else "none", train=True)
     testset = StyleTransferDataset(
-        data_dir, cache_setting="load", train=False)
+        data_dir, cache_setting="load" if use_cached else "none", train=False)
 
     # takes the trainset we defined, loads 4 (default 1) at a time,
     # shuffle=True reshuffles the data every epoch
@@ -294,6 +296,12 @@ if __name__ == "__main__":
         default=time.time_ns(),
         help='file name of loss log'
     )
+    parser.add_argument(
+        '--ignore_cache',
+        action='store_true',
+        help='load dataset from precached data'
+    )
     options = parser.parse_args()
     print('loss log options', options)
-    main(options.loss_file_name, options.save_loss_file)
+    print("cuda:0" if torch.cuda.is_available() else "cpu")
+    main(options.loss_file_name, options.save_loss_file, not options.ignore_cache)

@@ -1,25 +1,24 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from basic_block import BasicBlock
 from weight_init import weight_init
 
+
 # compute a set of render parameters (psi) given an input_data and style
 class FPsi(nn.Module):
-    def __init__(self, num_render_params=12, num_camera_samples=16):
+    def __init__(self, num_render_params=12):
         super(FPsi, self).__init__()
         self.num_render_params = num_render_params
-        self.num_camera_samples = num_camera_samples        
         self.main = nn.ModuleList([
-            BasicBlock(3, 8, 5),
-            BasicBlock(8, 16, 4, 2),
-            BasicBlock(16, 32, 4, 2),
-            BasicBlock(32, 64, 4, 2),
-            BasicBlock(64, 128, 4, 2),
+            BasicBlock(3, 8, 5, 1),
+            BasicBlock(8, 16, 4, 1),
+            BasicBlock(16, 32, 4, 1),
+            BasicBlock(32, 64, 4, 1),
+            BasicBlock(64, 128, 4, 1),
             BasicBlock(128, 512, 4, 2),
             BasicBlock(512, 512, 4, 2),
-            BasicBlock(512, 512, 4, 2)
+            BasicBlock(512, 512, 2, 1)
         ])
         self.fc1 = nn.Linear(512, 512)
         self.fc2 = nn.Linear(512, 512)
