@@ -47,7 +47,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         '--num_styles_per_image',
-        default=1,
+        default=3,
         help='number of psis per data cube'
     )
     parser.add_argument(
