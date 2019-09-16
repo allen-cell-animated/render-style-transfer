@@ -62,6 +62,10 @@ def normalize(value, rangetuple):
     return (value - rangetuple[0]) / (rangetuple[1] - rangetuple[0])
 
 
+def denormalize(value, rangetuple):
+    return value * (rangetuple[1] - rangetuple[0]) + rangetuple[0]
+
+
 class render_function:
     brightness_range = (1.0, 1.5)
     contrast_range = (1.0, 2.0)
@@ -92,31 +96,23 @@ class render_function:
         return normalized
 
     def denormalize_render_params(self, normalized_render_params):
-        return []  # [normalized_render_params*255]
+        colors = [denormalize(c, self.color_range) for c in normalized_render_params[3:]]
+        params = [
+            denormalize(normalized_render_params[0], self.brightness_range),
+            denormalize(normalized_render_params[1], self.contrast_range),
+            denormalize(normalized_render_params[2], self.gamma_range),
+            *colors
+        ]
+        return params
 
     # returns a pil-compatible rbg image
-    def render(self, input_data, render_params, camera_transform):
+    def render(self, input_data, render_params, camera_transform=None):
         # this function could do anything (e.g. do volume rendering)
-        # in this case, the "render" will be a convolution filter and the render params are the filter weights
-        # and our camera_transform just rotates the image
-        renderedimage = input_data
-        # the first 9 render_params need to become a 3x3 filter to apply to the image.
-        # if len(render_params) < 9:
-        #     raise "Bad number of render_params"
-        # convfilter = [[render_params[i + j * 3] for i in range(3)] for j in range(3)]
 
-        # note that groups=3 and we only put one in the array here
-        # this is reshaping to make the conv2d happy
-        # renderedimage = F.conv2d(
-        #     torch.Tensor([input_data]),
-        #     # apply same filter to each of r,g,b channels
-        #     torch.Tensor([reshaped_params, reshaped_params, reshaped_params]),
-        #     bias=None,
-        #     stride=1,
-        #     padding=1,
-        #     dilation=1,
-        #     groups=3,
-        # )
+        # colorize a grayscale image
+
+        renderedimage = input_data
+
         renderedimage = transforms.functional.adjust_brightness(
             renderedimage, render_params[0])
         renderedimage = transforms.functional.adjust_contrast(
@@ -127,18 +123,7 @@ class render_function:
 
         renderedimage = transforms.functional.adjust_gamma(
             renderedimage, render_params[2])
-        # renderedimage = transforms.functional.adjust_hue(
-        #     renderedimage, render_params[3])
-        # renderedimage = transforms.functional.adjust_saturation(
-        #     renderedimage, render_params[4])
 
-        # # normalize back to displayable range after convolution
-        # maxval = renderedimage.max()
-        # renderedimage = transforms.functional.normalize(
-        #     renderedimage[0], mean=[0, 0, 0], std=[maxval, maxval, maxval]
-        # )
-        # renderedimage_pil = transforms.functional.to_pil_image(renderedimage, mode=None)
-
-        final_image = camera_transform(renderedimage)
+        final_image = renderedimage if camera_transform is None else camera_transform(renderedimage)
 
         return final_image

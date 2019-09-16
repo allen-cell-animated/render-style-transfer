@@ -75,6 +75,15 @@ class StyleTransferDataset(Dataset):
         with open(self.cache_file, "r") as read_file:
             self.dataset = json.load(read_file)
             self.all_files = list(map(lambda x: x["data_file"], self.dataset))
+        dataset_entry = self.dataset[0]
+        render_ids = dataset_entry["render_ids"]
+        # number of render params is equal to the number of unique render_ids for this data cube
+        self.num_psis_per_data_cube = len(set(render_ids))
+        renders = dataset_entry["renders"]
+        self.camera_samples = int(len(renders) / self.num_psis_per_data_cube)
+        print("Loaded dataset from cache:")
+        print(f"  num_psis_per_data_cube: {self.num_psis_per_data_cube}")
+        print(f"  camera_samples: {self.camera_samples}")
 
     def load_from_data_dir(self):
         self.all_files = []
@@ -97,6 +106,7 @@ class StyleTransferDataset(Dataset):
         return self.num_files
 
     def __getitem__(self, idx):
+        # one data item is one "data cube"
         # load some input_data for our render_function
         im_2d_cube_ids = []
         images = []
@@ -120,8 +130,7 @@ class StyleTransferDataset(Dataset):
                 renderedimage = io.imread(path)
                 final_image = transforms.functional.to_tensor(renderedimage)
                 images.append(final_image)
-                im_2d_cube_ids.append(
-                    idx + render_ids[i // int(self.camera_samples)])
+                im_2d_cube_ids.append(render_ids[i])
 
         else:
             img_name = os.path.join(self.data_dir, self.all_files[idx])
@@ -141,7 +150,6 @@ class StyleTransferDataset(Dataset):
                 image.save(original_outpath)
 
             render_params = []
-            render_ids = [i for i in range(self.num_psis_per_data_cube)]
             images_names = []
 
             # prepare the sampler of camera transforms
@@ -162,7 +170,9 @@ class StyleTransferDataset(Dataset):
                         image, params, apply_camera)
                     final_image = transforms.functional.to_tensor(renderedimage)
                     images.append(final_image)
-                    im_2d_cube_ids.append(idx + render_ids[j // int(self.camera_samples)])
+                    # id should represent same data cube and same render params
+                    # (same data cube, same render params, but different camera should be same im_2d_cube_id)
+                    im_2d_cube_ids.append(idx * self.num_psis_per_data_cube + k)
                     render_params.append(the_render_function.normalize_render_params(params))
 
                     if self.cache_setting == "save":
@@ -171,7 +181,8 @@ class StyleTransferDataset(Dataset):
                         renderedimage.save(outpath)
 
             if self.cache_setting == "save":
-                self.save_to_dataset_file(original_outpath, images_names, render_params, render_ids)
+                # images_names and im_2d_cube_ids should have same length
+                self.save_to_dataset_file(original_outpath, images_names, render_params, im_2d_cube_ids)
 
         images = torch.stack(images)
         im_as_tensor = transforms.functional.to_tensor(image)

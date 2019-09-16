@@ -99,7 +99,17 @@ f_predict(d_2, s_target) = Ѱ_2
 		* increase batch size
 		* load model and data loader to evaluate jypter notebook
 		* evauate model
-		
+
+Things to do:
+- json: 
+		num epochs
+		batch size
+		learning rate
+- repeated CONV2D with stride 1 versus stride 2
+- what is the preferred way to save model?
+- show us your examples 
+- what can we do to learn f_psi better
+
 
 **main loop:**
 
