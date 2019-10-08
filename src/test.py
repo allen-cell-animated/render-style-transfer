@@ -52,16 +52,18 @@ def test(version, testloader):
 
     dataiter = iter(testloader)
     # grab batch of four images again but from data it hasn't seen before
-    im_cube, im_2d, im_2d_cube_ids, psi = dataiter.next()
+    im_cube, im_2d, im_style_ids, datacube_ids, psi = dataiter.next()
     print(f"im_cube shape: {im_cube.shape}")
     print(f"im_2d shape: {im_2d.shape}")
-    print(f"im_2d_cube_ids shape: {im_2d_cube_ids.shape}")
+    print(f"im_style_ids shape: {im_style_ids.shape}")
+    print(f"datacube_ids shape: {datacube_ids.shape}")
     print(f"psi shape: {psi.shape}")
 
     #
     im_cube = im_cube.to(device)
     im_2d = im_2d.to(device)
-    im_2d_cube_ids = im_2d_cube_ids.to(device)
+    im_style_ids = im_style_ids.to(device)
+    datacube_ids = datacube_ids.to(device)
     psi = psi.to(device)
 
     # loop to generate a set of images with different styles and different camera angles
@@ -89,10 +91,14 @@ def test(version, testloader):
         small_batch_of_styles = batch_of_styles[perm]
         small_batch_of_images = flattened_im[perm]
         computed_psi = f_psi(im_cube, small_batch_of_styles)
+        print(f"computed psi shape : {computed_psi.shape}")
 
+        subbatchpsi = psi[perm]
         for i in range(computed_psi.shape[0]):
+            # TODO fix indexing of psi
             t = torch.dist(computed_psi[i], psi[i])
             print(f"Distance between computed psi and actual psi: {t}")
+            print(f"Learned psi: {computed_psi[i]}")
 
         styleA = small_batch_of_styles[0]
         # psiA = computed_psi[0]
@@ -107,6 +113,8 @@ def test(version, testloader):
 
         print("SORTED STYLE DIFFERENCES AGAINST SYLE OF IMAGE 0:")
         print(sorted(distancelist))
+        for i in range(small_batch_of_styles.shape[0]):
+            print(f"Learned style: {small_batch_of_styles[i]}")
 
         for m, k in enumerate(sorted_indices):
             params = the_render_function.denormalize_render_params(computed_psi[k])

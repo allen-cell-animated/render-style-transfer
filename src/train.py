@@ -69,7 +69,7 @@ def train(
     f.write("Epoch, index,loss_style,loss_psi,total_loss\n")
     f.close()
     loss_fn = nn.MSELoss()
-    regularization_rate = 1  # aka lambda
+    regularization_rate = 1000  # aka lambda
     # Implements stochastic gradient descent (optionally with momentum).
     optimizer = optim.Adam(f_style.parameters(), lr=learning_rate)
     for epoch in range(number_of_epochs):  # loop over the dataset multiple times
@@ -78,21 +78,23 @@ def train(
         # trainloader is the method that gets 4 examples out of the training dataset at a time
         # each epoch trainloader will shuffle the data because we told it to
         for i, data in enumerate(trainloader, 0):
-            im_cube, im_2d, im_2d_cube_ids, psi = data
+            im_cube, im_2d, im_style_ids, datacube_ids, psi = data
 
             # batch shape debugging
             # print(f"im_cube shape: {im_cube.shape}")
             # print(f"im_2d shape: {im_2d.shape}")
-            # print(f"im_2d_cube_ids shape: {im_2d_cube_ids.shape}")
+            # print(f"im_style_ids shape: {im_style_ids.shape}")
             # print(f"psi shape: {psi.shape}")
 
             im_cube = im_cube.to(device)
             im_2d = im_2d.to(device)
-            im_2d_cube_ids = im_2d_cube_ids.to(device)
+            im_style_ids = im_style_ids.to(device)
+            datacube_ids = datacube_ids.to(device)
             psi = psi.to(device)
 
             # batch_size * num_camera_samples * num_psis_per_data_cube, scalar
-            batch_of_ids = torch.flatten(im_2d_cube_ids)
+            batch_of_style_ids = torch.flatten(im_style_ids)
+            batch_of_datacube_ids = torch.flatten(datacube_ids)
 
             # batch_size * num_camera_samples * num_psis_per_data_cube, num of render params
             batch_of_psis = torch.flatten(psi, 0, 1)
@@ -118,7 +120,8 @@ def train(
             # one style per data cube in the batch
             small_batch_of_styles = batch_of_styles[perm]
 
-            # print(f"batch_of_ids shape: {batch_of_ids.shape}")
+            # print(f"batch_of_style_ids shape: {batch_of_style_ids.shape}")
+            # print(f"batch_of_datacube_ids shape: {batch_of_datacube_ids.shape}")
             # print(f"batch_of_psis shape: {batch_of_psis.shape}")
             # print(f"flattened_im shape: {flattened_im.shape}")
             # print(f"batch_of_styles shape: {batch_of_styles.shape}")
@@ -126,6 +129,8 @@ def train(
             # print(f"im_cube shape: {im_cube.shape}")
 
             psi_hat = f_psi(im_cube, small_batch_of_styles)
+
+            import pdb; pdb.set_trace()
             loss_psi = loss_fn(psi_hat, batch_of_psis[perm])
             ###########################################
 
@@ -133,11 +138,12 @@ def train(
 
             # same style means same data cube and same render params but different camera transform
             for j, s in enumerate(batch_of_styles):
-                current_im_id = batch_of_ids[j]
-                # print('current_im_id', current_im_id)
+                current_style_id = batch_of_style_ids[j]
+                current_datacube_id = batch_of_datacube_ids[j]
+                # print('current_style_id', current_style_id)
 
                 # get all indices of ids that are the same as j
-                list_of_same_ids = (batch_of_ids == current_im_id).nonzero().flatten()
+                list_of_same_ids = (batch_of_style_ids == current_style_id).nonzero().flatten()
                 # print('list_of_same_ids', list_of_same_ids)
 
                 # pick one
@@ -145,15 +151,33 @@ def train(
                 index_with_id_same = randomly_choose(list_of_same_ids)
 
                 # get all indices of ids that are different than j
-                list_of_different_ids = (batch_of_ids != current_im_id).nonzero().flatten()
+                different_styles = (batch_of_style_ids != current_style_id)
+
+                same_datacubes = (batch_of_datacube_ids == current_datacube_id)
+                diff_datacubes = (batch_of_datacube_ids != current_datacube_id)
+                
+                intersection1 = different_styles * same_datacubes
+                intersection2 = diff_datacubes
+
+                list1 = intersection1.nonzero().flatten()
+                idx1 = randomly_choose(list1)
+                list2 = intersection2.nonzero().flatten()
+                idx2 = randomly_choose(list2)
+
+                #print(idx1)
+                #print(idx2)
+
+                list_of_different_style_ids = torch.LongTensor([idx1, idx2])
                 ####
                 # TODO: ?filter this so that we only pick ids from same data cube as j came from?
                 # (this should help it learn that style is not the same as data cube)
                 ####
-                # print('list of different', list_of_different_ids)
+                # print('list of different', list_of_different_style_ids)
 
                 # pick one
-                index_with_id_different = randomly_choose(list_of_different_ids)
+                index_with_id_different = randomly_choose(list_of_different_style_ids)
+                #print(f'different choice : {index_with_id_different}')
+                #print(f'batch_of_styles : {batch_of_styles.shape}')
                 # compute loss
                 loss_style = (
                     loss_style + torch.dist(s, batch_of_styles[index_with_id_same]) ** 2 - torch.dist(s, batch_of_styles[index_with_id_different]) ** 2
@@ -199,7 +223,7 @@ def main(loss_file_name, keep_logs, use_cached=True):
     # windows_local_data_dir = "D:/src/aics/render-style-transfer/training_data"
 
     data_dir = "D:/src/aics/render-style-transfer/training_data"
-    batch_size = 2
+    batch_size = 4
     learning_rate = 0.0001
     number_of_epochs = 1
     model_version_name = "model0"

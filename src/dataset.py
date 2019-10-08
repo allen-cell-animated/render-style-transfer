@@ -24,7 +24,7 @@ from render_function import render_function
 
 # 1. im_as_tensor (input data cube as tensor)
 # 2. images (camera_samples images)
-# 3. im_2d_cube_ids (array of length camera_samples * num_psis_per_data_cube, with an id of image idx + psi idx)
+# 3. im_style_ids (array of length camera_samples * num_psis_per_data_cube, with an id of image idx + psi idx)
 # 4. render_params (array of length camera_samples * num_psis_per_data_cube, with num_psis_per_data_cube number of different render parameters)
 
 # cache_setting options: load (load from cache), save (save results of rendering), none (do nothing)
@@ -108,7 +108,8 @@ class StyleTransferDataset(Dataset):
     def __getitem__(self, idx):
         # one data item is one "data cube"
         # load some input_data for our render_function
-        im_2d_cube_ids = []
+        im_style_ids = []
+        datacube_ids = []
         images = []
         # print('getting item', idx)
         if self.cache_setting == "load":
@@ -130,7 +131,8 @@ class StyleTransferDataset(Dataset):
                 renderedimage = io.imread(path)
                 final_image = transforms.functional.to_tensor(renderedimage)
                 images.append(final_image)
-                im_2d_cube_ids.append(render_ids[i])
+                im_style_ids.append(render_ids[i])
+                datacube_ids.append(idx)
 
         else:
             img_name = os.path.join(self.data_dir, self.all_files[idx])
@@ -172,7 +174,8 @@ class StyleTransferDataset(Dataset):
                     images.append(final_image)
                     # id should represent same data cube and same render params
                     # (same data cube, same render params, but different camera should be same im_2d_cube_id)
-                    im_2d_cube_ids.append(idx * self.num_psis_per_data_cube + k)
+                    im_style_ids.append(idx * self.num_psis_per_data_cube + k)
+                    datacube_ids.append(idx)
                     render_params.append(the_render_function.normalize_render_params(params))
 
                     if self.cache_setting == "save":
@@ -181,12 +184,13 @@ class StyleTransferDataset(Dataset):
                         renderedimage.save(outpath)
 
             if self.cache_setting == "save":
-                # images_names and im_2d_cube_ids should have same length
-                self.save_to_dataset_file(original_outpath, images_names, render_params, im_2d_cube_ids)
+                # images_names and im_style_ids should have same length
+                self.save_to_dataset_file(original_outpath, images_names, render_params, im_style_ids)
 
         images = torch.stack(images)
         im_as_tensor = transforms.functional.to_tensor(image)
-        im_2d_cube_ids = torch.Tensor(im_2d_cube_ids)
+        im_style_ids = torch.Tensor(im_style_ids)
+        datacube_ids = torch.Tensor(datacube_ids)
         render_params = torch.Tensor(render_params)
 
         # one item from this data set consists of:
@@ -194,7 +198,7 @@ class StyleTransferDataset(Dataset):
         #   a set of images generated with the same render_parameters("style") but different camera angles,
         #   a set of indices that will tie the rendered images back to the data image,
         #   the set of render_parameters
-        sample = (im_as_tensor, images, im_2d_cube_ids, render_params)
+        sample = (im_as_tensor, images, im_style_ids, datacube_ids, render_params)
 
         return sample
 

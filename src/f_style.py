@@ -21,12 +21,12 @@ class FStyle(nn.Module):
             BasicBlock(32, 64, 4, 1),
             BasicBlock(64, 128, 4, 1),
             BasicBlock(128, 512, 4, 2),
-            BasicBlock(512, 512, 4, 2),
-            BasicBlock(512, 512, 2, 1)
+            BasicBlock(512, 512, 4, 2)
+            #BasicBlock(512, 512, 2, 1)
         )
-        self.fc1 = nn.Linear(512, 512)
+        self.fc1 = nn.Linear(2048, 256)
         self.fc2 = nn.Linear(512, 512)
-        self.fc3 = nn.Linear(512, 10)
+        self.fc3 = nn.Linear(256, 10)
 
         self.out = nn.Sigmoid()
         self.apply(weight_init)
@@ -42,9 +42,10 @@ class FStyle(nn.Module):
         # (to fit into the fc1 ?)
         x = x.view([x.shape[0], -1])
         # torch.Size([64, 5776])
+        # print(x.shape)
         x = F.relu(self.fc1(x))
         # torch.Size([64, 120])
-        x = F.relu(self.fc2(x))
+        #x = F.relu(self.fc2(x))
         # torch.Size([64, 84])
         x = self.fc3(x)
         # because fc3 returns length 10, that is our final length of a style representation:

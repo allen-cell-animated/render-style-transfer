@@ -1,5 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
+import torch
 
 from basic_block import BasicBlock
 from weight_init import weight_init
@@ -10,19 +11,34 @@ class FPsi(nn.Module):
     def __init__(self, num_render_params=12):
         super(FPsi, self).__init__()
         self.num_render_params = num_render_params
+        # self.main = nn.ModuleList([
+        #     BasicBlock(3, 8, 5, 1),
+        #     BasicBlock(8, 16, 4, 1),
+        #     BasicBlock(16, 32, 4, 1),
+        #     BasicBlock(32, 64, 4, 1),
+        #     BasicBlock(64, 128, 4, 1),
+        #     BasicBlock(128, 512, 4, 2),
+        #     BasicBlock(512, 512, 4, 2),
+        #     BasicBlock(512, 512, 2, 1)
+        # ])
         self.main = nn.ModuleList([
-            BasicBlock(3, 8, 5, 1),
-            BasicBlock(8, 16, 4, 1),
-            BasicBlock(16, 32, 4, 1),
-            BasicBlock(32, 64, 4, 1),
-            BasicBlock(64, 128, 4, 1),
-            BasicBlock(128, 512, 4, 2),
-            BasicBlock(512, 512, 4, 2),
-            BasicBlock(512, 512, 2, 1)
+            BasicBlock(3, 64, 4, 2),
+            BasicBlock(64, 128, 4, 2),
+            BasicBlock(128, 256, 4, 2),
+            # BasicBlock(256, 512, 4, 2),
+            # BasicBlock(512, 512, 4, 2),
         ])
-        self.fc1 = nn.Linear(512, 512)
-        self.fc2 = nn.Linear(512, 512)
-        self.fc3 = nn.Linear(512, num_render_params)
+
+        self.linear = nn.Sequential(
+            nn.Linear(1024+10, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.BatchNorm1d(512),
+            nn.ReLU(),
+            nn.Linear(512, num_render_params),
+            nn.Sigmoid())
+
 
         style_length = 10
         volintensitylength = 1  # n channels in volume ?
@@ -60,19 +76,22 @@ class FPsi(nn.Module):
         # strategy :  combine the style with the volume, then downsample, then repeat a few times.
 
         for layer in self.main:
-            x = self.combine(x, y)
+            # x = self.combine(x, y)
             x = layer(x)
 
         # reshape tensor x to have its second dimension be of size 16*19*19,
         # (to fit into the fc1 ?)
-        x = x.view([x.shape[0], -1])
+        x = torch.cat([x.view([x.shape[0], -1]), y],1)
 
-        # torch.Size([4, 5776])
-        x = F.relu(self.fc1(x))
-        # torch.Size([4, 120])
-        x = F.relu(self.fc2(x))
-        # torch.Size([4, 84])
-        x = self.fc3(x)
-        # because fc3 returns length num_render_params, that is our final length of a style representation:
-        # torch.Size([4, num_render_params])
+        x = self.linear(x)
+
+        # # torch.Size([4, 5776])
+        # x = F.relu(self.fc1(x))
+        # # torch.Size([4, 120])
+        # x = F.relu(self.fc2(x))
+        # # torch.Size([4, 84])
+        # x = self.fc3(x)
+        # x = self.out(x)
+        # # because fc3 returns length num_render_params, that is our final length of a style representation:
+        # # torch.Size([4, num_render_params])
         return x

@@ -21,6 +21,10 @@ pip3 install scipy
 `python precompute_dataset.py`
 - precomputes a complete dataset
 
-Run render-style-transfer with optional boolean which dictates whether the logs are stored in a git tracked folder. 
-`python main.py [keep_logs=False]`
+Run train.py with optional boolean which dictates whether the logs are stored in a git tracked folder. 
+`python train.py [keep_logs=False]`
 - trains the model
+
+Run test.py. 
+`python test.py`
+- tests the model and generates results that can be examined/analyzed

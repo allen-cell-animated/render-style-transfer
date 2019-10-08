@@ -1,0 +1,9 @@
+train:
+  data_dir: "D:/src/aics/render-style-transfer/training_data"
+  batch_size: 2
+  learning_rate: 0.0001
+  number_of_epochs: 1
+  model_version_name: "model0"
+  save_loss_file: False
+  loss_file_name: ""
+  ignore_cache: True
